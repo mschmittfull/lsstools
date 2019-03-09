@@ -30,7 +30,7 @@ from nbodykit.base.mesh import MeshSource
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
 from nbodykit import logging
-from psirec.nbkit03_utils import get_cstat, get_cstats_string, print_cstats
+from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
 
 """
 Store a collection of nbdodykit MeshSource objects, e.g. RealField objects.
