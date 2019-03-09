@@ -5,7 +5,7 @@ Tools for large-scale structure analysis.
 
 Installation
 ------------
-The code requires `nbodykit <https://github.com/bccp/nbodykit>` version 0.3.4 or higher.
+The code requires `nbodykit <https://github.com/bccp/nbodykit>`_ version 0.3.4 or higher.
 
 To install this in a new anaconda environment, use
 
