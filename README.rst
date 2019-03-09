@@ -2,6 +2,10 @@ lsstools
 =========================================
 Tools for large-scale structure analysis.
 
+Usage
+-----
+See `perr <https://github.com/mschmittfull/perr>`_ for an example of how to use the code.
+
 
 Installation
 ------------
