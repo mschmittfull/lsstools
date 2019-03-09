@@ -34,7 +34,6 @@ import sys
 from nbodykit.source.catalog import HDFCatalog
 from nbodykit.source.mesh.bigfile import BigFileMesh
 from Grid import RealGrid, ComplexGrid
-from psirec.dict_utils import *
 from nbkit03_utils import get_cstat
 from nbodykit import logging
 
@@ -268,4 +267,15 @@ def paint_cat_to_gridk(
         return gridk
 
 
+
+
+def convert_np_arrays_to_lists(indict):
+    outdict = OrderedDict()
+    for k in indict.keys():
+        if type(indict[k]) == np.ndarray:
+            # convert to list b/c json cannot save numpy arrays
+            outdict[k] = indict[k].tolist()
+        else:
+            outdict[k] = indict[k]
+    return outdict
 
