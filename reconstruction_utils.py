@@ -35,7 +35,7 @@ from nbodykit.source.catalog import HDFCatalog
 from nbodykit.source.mesh.bigfile import BigFileMesh
 # import constants
 # import Catalog
-from Grid_nbk03 import RealGrid, ComplexGrid
+from Grid import RealGrid, ComplexGrid
 from psirec.dict_utils import *
 from psirec.nbkit03_utils import get_cstat
 #convert_np_arrays_to_lists

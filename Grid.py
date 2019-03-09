@@ -624,8 +624,8 @@ class RealGrid(Grid):
 
         fill_value_negative_mass : if not None, set mass ofparticles with negative to mass to this value.
         """
-        import Catalog_nbk03
-        uniform_cat = Catalog_nbk03.Catalog()
+        import Catalog
+        uniform_cat = Catalog.Catalog()
         uniform_cat.sim_Ngrid = None
         uniform_cat.sim_boxsize = self.boxsize
         grid_infodict = self.column_infos.get(col, {})
