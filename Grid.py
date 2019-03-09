@@ -1374,7 +1374,7 @@ class ComplexGrid(Grid):
 
         from scipy.linalg import cholesky
         from scipy import interpolate as interp
-        from psirec import interpolation_utils
+        import interpolation_utils
         
         # make a copy so we don't change input list
         all_fields = all_in_fields[:]

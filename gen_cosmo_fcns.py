@@ -16,10 +16,6 @@ from matplotlib import rc
 import matplotlib.ticker as ticker
 from collections import OrderedDict
 
-# MS packages
-import constants
-
-
 
 def generate_calc_Da(test_plot=False, N_integration=10000, cosmo=None, verbose=True):
     """
