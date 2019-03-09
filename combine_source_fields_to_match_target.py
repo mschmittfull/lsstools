@@ -35,9 +35,9 @@ from nbodykit.source.mesh.field import FieldMesh
 
 # MS packages
 from Grid import RealGrid, ComplexGrid
-from psirec.cosmo_model import CosmoModel
-from psirec.gen_cosmo_fcns import generate_calc_Da
-import reconstruction_utils as rec_utils
+from cosmo_model import CosmoModel
+from gen_cosmo_fcns import generate_calc_Da
+import paint_utils
 import transfer_functions_from_fields
 
 
@@ -109,11 +109,11 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
         # paint deltanonl and save it in gridk.G['delta_h_unsmoothed'] 
         if gridx is None and gridk is None:
             # return gridx and gridk
-            gridx, gridk = rec_utils.paint_cat_to_gridk(config_dict, column=cat_id,
+            gridx, gridk = paint_utils.paint_cat_to_gridk(config_dict, column=cat_id,
                                                         **default_paint_kwargs)
         else:
             # modify existing gridx and gridk
-            rec_utils.paint_cat_to_gridk(config_dict, column=cat_id,
+            paint_utils.paint_cat_to_gridk(config_dict, column=cat_id,
                                                         **default_paint_kwargs)
         
         print("\n\nINFO %s:\n"%cat_id)
@@ -194,12 +194,12 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             # get density from external file and rescale it
             assert 'rescalefac' not in default_paint_kwargs
             if gridx is None and gridk is None:
-                gridx, gridk = rec_utils.paint_cat_to_gridk(
+                gridx, gridk = paint_utils.paint_cat_to_gridk(
                     config_dict, column=ext_grid_id, rescalefac=rescalefac,
                     **default_paint_kwargs)
             else:
                 # modify existing gridx and gridk
-                rec_utils.paint_cat_to_gridk(
+                paint_utils.paint_cat_to_gridk(
                     config_dict, column=ext_grid_id, rescalefac=rescalefac,
                     **default_paint_kwargs)
                 

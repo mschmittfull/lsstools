@@ -16,8 +16,8 @@ import sys
 from nbodykit.source.mesh.field import FieldMesh
 
 # MS packages
-from psirec import transfer_functions
-from psirec import interpolation_utils
+import transfer_functions
+import interpolation_utils
 
 def generate_sources_and_get_interp_filters_minimizing_sqerror(
     gridx=None, gridk=None,
