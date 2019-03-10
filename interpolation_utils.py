@@ -30,7 +30,7 @@ import sys
 
 
 def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None, bounds_error=False,
-                              Ngrid=None, L=None, k_bin_width=1.0, verbose=True):
+                              Ngrid=None, L=None, k_bin_width=1.0, verbose=False):
     """
     Interpolate following a fixed k binning scheme that's also used to measure power spectra
     in cy_power_estimator.pyx.

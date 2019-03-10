@@ -149,10 +149,14 @@ def get_stacked_pickles_for_varying_base_opts(
         return_base_vp_pickles=False,
         return_base_vp_pickle_opts=False,
         return_base_vp_pickle_fnames=False,
-        verbose=True, dbg=True):
+        verbose=True, dbg=True, get_in_path=None):
     """
     For each entry base_param_names_values, stack stack_key over stack_values.
     """
+
+    if get_in_path is None:
+        # had this in same folder previously
+        from path_utils import get_in_path
 
     # PicklesDB instance to load options of all pickles needed
     pdb = PicklesDB.PicklesDB(
