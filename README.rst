@@ -16,7 +16,7 @@ To install this in a new anaconda environment, use for example
 .. code-block:: bash
 
   $ cd ~/anaconda/anaconda/envs
-  $ conda create -n nbodykit-env -c bccp -c astropy python=2.7 nbodykit=0.3.7 bigfile pmesh 
+  $ conda create -n nbodykit-0.3.7-env -c bccp -c astropy python=2.7 nbodykit=0.3.7 bigfile pmesh 
 
 Newer versions of nbodykit should also work but are not tested. 
 
@@ -24,7 +24,7 @@ To activate the environment, use
 
 .. code-block:: bash
 
-  $ source activate nbodykit-env
+  $ source activate nbodykit-0.3.7-env
 
 To deactivate it, use
 
