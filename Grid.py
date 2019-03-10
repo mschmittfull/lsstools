@@ -961,7 +961,7 @@ class ComplexGrid(Grid):
 
 
     def calc_all_power_spectra(self, columns=None, Pk_ptcle2grid_deconvolution=None,
-                               k_bin_width=1.0, Pkmeas=None):
+                               k_bin_width=1.0, Pkmeas=None, verbose=False):
         """
         Calculate power spectra between columns. If columns=None, compute power spectra
         of all columns of the Grid object.
@@ -1000,12 +1000,13 @@ class ComplexGrid(Grid):
                             mode='1d', dk=Pk_dk, kmin=Pk_kmin)
 
                     # print info
-                    if self.comm.rank == 0:
-                        self.logger.info("Pkresult: %s" % str(Pkresult))
-                        self.logger.info("Pkresult k: %s" % str(Pkresult.power['k']))
-                        self.logger.info("Pkresult Nmodes: %s" % str(Pkresult.power['modes'].real))
-                        self.logger.info("Pkresult P: %s" % str(Pkresult.power['power'].real))
-                        self.logger.info("Pkresult attrs: %s" % str(Pkresult.attrs))
+                    if verbose:
+                        if self.comm.rank == 0:
+                            self.logger.info("Pkresult: %s" % str(Pkresult))
+                            self.logger.info("Pkresult k: %s" % str(Pkresult.power['k']))
+                            self.logger.info("Pkresult Nmodes: %s" % str(Pkresult.power['modes'].real))
+                            self.logger.info("Pkresult P: %s" % str(Pkresult.power['power'].real))
+                            self.logger.info("Pkresult attrs: %s" % str(Pkresult.attrs))
 
                     # save info about Pk and fields for convenience
                     info = {'Ngrid': self.Ngrid, 'boxsize': self.boxsize,
@@ -1024,8 +1025,6 @@ class ComplexGrid(Grid):
     def apply_fk(self, fk):
         raise Exception("Not implemented")
 
-    
-    # TODOO: upgrade below
 
     def calc_kappa2(self, field_column, gridx=None):
         """
