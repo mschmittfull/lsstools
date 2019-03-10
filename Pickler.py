@@ -58,6 +58,8 @@ class Pickler(object):
                 if file_exists: 
                     time.sleep(np.random.randint(30))
             # write empty file
+            if not os.path.exists(os.path.dirname(fname)):
+                os.makedirs(os.path.dirname(fname))
             open(fname, "w").close()
             self.full_fname = fname
         print("Pickler initialized: %s" % self.full_fname)

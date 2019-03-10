@@ -435,7 +435,8 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             k_bin_width=opts['k_bin_width'],
             Pkmeas=Pkmeas)
 
-        raise Exception('compare codes here (this is new code)')
+
+        #raise Exception('compare codes here (this is new code)')
 
         
         print("Pkmeas keys:\n", Pkmeas.keys())
