@@ -1,29 +1,16 @@
 #!/usr/bin/env python
-#
-# Marcel Schmittfull 2018 (mschmittfull@gmail.com)
-#
-# Python script for BAO reconstruction.
-#
-# Uses nbodykit 0.3.0
+
+# Uses nbodykit 0.3.x
 
 
 
 from __future__ import print_function,division
 
 import cPickle
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import os
 from collections import OrderedDict
-from matplotlib import rcParams
-from matplotlib import rc
-from matplotlib.ticker import MultipleLocator
 from scipy import interpolate as interp
-#from scipy.interpolate import RectBivariateSpline
-#import time
-#import re
-#import h5py
 import random
 import glob
 import sys

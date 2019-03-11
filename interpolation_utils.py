@@ -14,14 +14,9 @@ Interpolation utils.
 from __future__ import print_function,division
 
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import os
 from collections import OrderedDict
-from matplotlib import rcParams
-from matplotlib import rc
-from matplotlib.ticker import MultipleLocator
 from scipy import interpolate as interp
 import numpy.core.numeric as NX
 import sys

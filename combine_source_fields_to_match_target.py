@@ -19,10 +19,6 @@ import numpy as np
 import os
 from collections import OrderedDict, namedtuple
 from scipy import interpolate as interp
-#from scipy.interpolate import RectBivariateSpline
-#import time
-#import re
-#import h5py
 import random
 import glob
 import sys

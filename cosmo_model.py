@@ -1,22 +1,6 @@
 #!/usr/bin/env python
-#
-# Python script for CMB lensing.
-#
-# Marcel Schmittfull 2016 (marcel-sl@gmx.de).
-#
+
 from __future__ import print_function,division
-
-import numpy as np
-import cPickle
-import matplotlib.pyplot as plt
-from scipy import interpolate
-import matplotlib.transforms as mtransforms
-from matplotlib import rcParams
-from matplotlib import rc
-import matplotlib.ticker as ticker
-from collections import OrderedDict
-
-# MS packages
 
 
 class CosmoModel:

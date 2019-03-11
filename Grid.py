@@ -6,26 +6,15 @@
 from __future__ import print_function,division
 
 import cPickle
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import os
 from collections import OrderedDict, namedtuple
-from matplotlib import rcParams
-from matplotlib import rc
-from matplotlib.ticker import MultipleLocator
-#from scipy import interpolate
-#from scipy.interpolate import RectBivariateSpline
-#import time
-#import re
 import h5py
 import json
 from copy import copy
 
 
 # MS packages
-#import constants
-#import fft_ms_v2
 from nbodykit.base.mesh import MeshSource
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
@@ -524,6 +513,7 @@ class RealGrid(Grid):
         """
         Mode: 0: Use nbodykit mesh preview.
         """
+        import matplotlib.pyplot as plt
         fig,ax = plt.subplots(1,1)
 
         if mode == 0:
