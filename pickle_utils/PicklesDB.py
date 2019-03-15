@@ -100,6 +100,7 @@ class PicklesDB(object):
                     if 'pickle_fname' not in comp_dict:
                         comp_dict['pickle_fname'] = fname
                     comp_dict = dict(comp_dict)
+                    import ujson
                     print('type:', type(comp_dict))
                     self.db.insert(dict(comp_dict))
 
