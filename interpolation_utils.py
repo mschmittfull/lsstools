@@ -1,18 +1,7 @@
 #!/usr/bin/env python
-#
-# Marcel Schmittfull 2017 (mschmittfull@gmail.com)
-#
-# Python script for iterative LPT BAO reconstruction.
-
-
-
-"""
-Interpolation utils.
-"""
 
 
 from __future__ import print_function,division
-
 
 import numpy as np
 import os
@@ -20,8 +9,6 @@ from collections import OrderedDict
 from scipy import interpolate as interp
 import numpy.core.numeric as NX
 import sys
-
-
 
 
 def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None, bounds_error=False,

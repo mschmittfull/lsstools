@@ -2,8 +2,6 @@
 
 # Uses nbodykit 0.3.x
 
-
-
 from __future__ import print_function,division
 
 import cPickle
@@ -14,8 +12,6 @@ from scipy import interpolate as interp
 import random
 import glob
 import sys
-
-
 
 # MS packages
 from nbodykit.source.catalog import HDFCatalog
@@ -62,13 +58,20 @@ def paint_cat_to_gridk(
     if PaintGrid_config['Painter']['plugin'] != 'DefaultPainter':
         raise Exception("nbkit 0.3 wrapper not implemented for plugin %s" % str(
             PaintGrid_config['plugin']))
-    implemented_painter_keys = ['plugin', 'normalize', 'setMean']
+    implemented_painter_keys = ['plugin', 'normalize', 'setMean', 'paint_mode', 'velocity_column']
     for k in PaintGrid_config['Painter'].keys():
         if k not in implemented_painter_keys:
             raise Exception("config key %s not implemented in wrapper" % str(k))
 
+    # TODO: implement keys 'weight' (different particles contribute with different weight or mass)
+
+
+
     ## Do the painting
 
+    # Paint number density (e.g. galaxy overdensity) or divergence of momentum density
+    paint_mode = PaintGrid_config['Painter'].get('paint_mode', None)
+    
     if PaintGrid_config['DataSource']['plugin'] == 'Subsample':
         
         ## Read hdf5 catalog file and paint
@@ -87,7 +90,7 @@ def paint_cat_to_gridk(
             logger.info("cat: %s" % str(cat_nbk))
             logger.info("columns: %s" % str(cat_nbk.columns))
 
-        # paint catalog to grid
+        # Paint options
         if grid_ptcle2grid_deconvolution is None:
             to_mesh_kwargs={
                 'window': 'cic', 'compensated': False, 'interlaced': False,
@@ -96,29 +99,73 @@ def paint_cat_to_gridk(
             }
         else:
             raise Exception("todo: specify to_mesh_kwargs properly")
-        #print(type(cat_nbk))
         
-        # init CatalogMesh object (not painted yet)
-        #mesh = cat_nbk.to_mesh(Nmesh=Ngrid, weight='log10M', **to_mesh_kwargs)
-        mesh = cat_nbk.to_mesh(Nmesh=Ngrid, **to_mesh_kwargs)
-        if comm.rank == 0:
-            logger.info("mesh type: %s" % str(type(mesh)))
-            logger.info("mesh attrs: %s" % str(mesh.attrs))
+        if paint_mode in [None, 'overdensity']:
+            # Paint overdensity.
+            # Init CatalogMesh object (not painted yet)
+            #mesh = cat_nbk.to_mesh(Nmesh=Ngrid, weight='log10M', **to_mesh_kwargs)
+            mesh = cat_nbk.to_mesh(Nmesh=Ngrid, **to_mesh_kwargs)
+            if comm.rank == 0:
+                logger.info("mesh type: %s" % str(type(mesh)))
+                logger.info("mesh attrs: %s" % str(mesh.attrs))
+
+            # Paint. If normalize=True, outfield = 1+delta; if normalize=False: outfield=rho
+            normalize = PaintGrid_config['Painter'].get('normalize',True)
+            outfield = mesh.to_real_field(normalize=normalize)
+
+        elif paint_mode == 'momentum_divergence':
+            # Paint momentum divergence div((1+delta)v/(aH)).
+            # See https://nbodykit.readthedocs.io/en/latest/cookbook/painting.html#Painting-the-Line-of-sight-Momentum-Field. 
+            assert PaintGrid_config['Painter'].has_key('velocity_column')
+            theta_k = None
+            for idir in [0,1,2]:
+                vi_label = 'tmp_V_%d' % idir
+                # this is the velocity / (a*H). units are Mpc/h
+                cat[vi_label] = cat[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                to_mesh_kwargs.update(dict(position='Position', value=vi_label))
+                mesh = cat_nbk.to_mesh(Nmesh=Ngrid, **to_mesh_kwargs)
+                if comm.rank == 0:
+                    logger.info("mesh type: %s" % str(type(mesh)))
+                    logger.info("mesh attrs: %s" % str(mesh.attrs))
+                # this is (1+delta)v_i/(aH) in k space  (if normalize were False would get rho*v_i/(aH))
+                outfield = mesh.to_complex_field(normalize=True)
+                # get nabla_i[(1+delta)v_i/(aH)]
+                def grad_i_fcn(k3vec, val, myidir=idir):
+                    return -1.0j * k3vec[myidir]*val
+                outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber', out=outfield)
+                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(aH)]
+                if theta_k is None:
+                    theta_k = FieldMesh(outfield.compute('complex'))
+                else:
+                    theta_k = FieldMesh(theta_k.compute(mode='complex') + outfield.compute(mode='complex'))
+
+            # save theta(x) in outfield
+            outfield = FieldMesh(theta_k.compute(mode='real'))
+
+        else:
+            raise Exception('Invalid paint_mode %s' % paint_mode)
 
 
-        # Paint. If normalize=True, outfield = 1+delta; if normalize=False: outfield=rho
-        normalize = PaintGrid_config['Painter'].get('normalize',True)
-        outfield = mesh.to_real_field(normalize=normalize)
 
 
     elif PaintGrid_config['DataSource']['plugin'] == 'BigFileGrid':
-        ## Read bigfile grid (mesh) directly, no painting required, e.g. for linear density.        
+        ## Read bigfile grid (mesh) directly, no painting required, e.g. for linear density.
+        if paint_mode not in [None, 'overdensity']:
+            raise Exception('Can only paint overdensity when reading BigFileGrid')
+
         if comm.rank == 0:
             logger.info("Try reading %s" % PaintGrid_config['DataSource']['path'])
         mesh = BigFileMesh(PaintGrid_config['DataSource']['path'],
                            dataset=PaintGrid_config['DataSource']['dataset'])
 
-        # Paint. If normalize=True, outfield = 1+delta; if normalize=False: outfield=rho
+        if PaintGrid_config['Painter'].get('value',None) is not None:
+            raise Exception('value kwarg not allowed in Painter when reading BigFileGrid')
+
+
+        # Paint. 
+        # If normalize=True, divide by the mean. In particular:
+        # - If paint_mode=None, overdensity: If normalize=True, outfield = 1+delta; if normalize=False, outfield=rho
+        # - If paint_mode=momentum_divergence: Reading from BigFileGrid not implemented
         outfield = mesh.to_real_field()
         normalize = PaintGrid_config['Painter'].get('normalize',True)
         if normalize:
@@ -252,6 +299,58 @@ def paint_cat_to_gridk(
         return gridx
     elif return_gridk:
         return gridk
+
+
+
+
+def weighted_paint_cat_to_delta(
+        cat, weight=None,
+        weighted_paint_mode=None,
+        Nmesh=None,
+        to_mesh_kwargs={'window': 'cic', 'compensated': False, 'interlaced': False},
+        set_mean = 0.0,
+        verbose=True):
+
+    if weight is None:
+        raise Exception("Must specify weight")
+    if weighted_paint_mode not in ['sum','avg']:
+        raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
+    
+    # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute
+    # equally. Later we divide by number of contributions.
+    meshsource = cat.to_mesh(Nmesh=Nmesh, value=weight, **to_mesh_kwargs)
+    meshsource.attrs['weighted_paint_mode'] = weighted_paint_mode
+
+    # get outfield = 1+delta
+    outfield = meshsource.paint(mode='real')
+
+    if weighted_paint_mode=='avg':
+        # count contributions per cell (no value or weight).
+        # outfield_count = 1+delta_unweighted = number of contributions per cell
+        outfield_count = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs).paint(mode='real')
+
+    if verbose:
+        comm = meshsource.comm
+        print("%d: outfield_weighted: min, mean, max, rms(x-1):"%comm.rank, 
+              np.min(outfield), np.mean(outfield), np.max(outfield), np.mean((outfield-1.)**2)**0.5)
+        if weighted_paint_mode=='avg':
+            print("%d: outfield_count: min, mean, max, rms(x-1):"%comm.rank, np.min(outfield_count), 
+                  np.mean(outfield_count), np.max(outfield_count), np.mean((outfield_count-1.)**2)**0.5)
+
+    # divide weighted 1+delta by number of contributions
+    if weighted_paint_mode=='avg':
+        outfield /= outfield_count
+        del outfield_count
+    
+    # set the mean
+    outfield = outfield - outfield.cmean() + set_mean
+
+    if verbose:
+        # print some info:
+        print("%d: outfield weighted/count: min, mean, max, rms(x-1):"%comm.rank, 
+              np.min(outfield), np.mean(outfield), np.max(outfield), np.mean((outfield-1.)**2)**0.5)
+
+    return outfield, meshsource.attrs
 
 
 

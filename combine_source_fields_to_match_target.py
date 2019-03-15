@@ -1,20 +1,9 @@
 #!/usr/bin/env python
-#
-# Marcel Schmittfull 2017 (mschmittfull@gmail.com)
-#
-# Python script for iterative LPT BAO reconstruction.
-#
+
 # Uses nbodykit 0.3.
 
 
-"""
-Compute power spectra of some fields.
-"""
-
-
 from __future__ import print_function,division
-
-
 import numpy as np
 import os
 from collections import OrderedDict, namedtuple
@@ -94,15 +83,18 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
                 'path': get_full_fname(paths['in_path'], cat_opts['in_fname'], opts['ssseed'])},
             'Painter': {
                 'plugin': 'DefaultPainter',
-                'normalize': True,
-                'setMean': 0.0
+                'normalize': True, # not used when paint_mode='momentum_divergence' 
+                'setMean': 0.0,
+                'paint_mode': cat_opts.get('paint_mode', 'overdensity'),
+                'velocity_column': cat_opts.get('velocity_column', None)
                 }
             }
 
         if cat_opts['weight_ptcles_by'] is not None:
             config_dict['Painter']['weight'] = cat_opts['weight_ptcles_by']
 
-        # paint deltanonl and save it in gridk.G['delta_h_unsmoothed'] 
+
+        # paint delta and save it in gridk.G[cat_id] 
         if gridx is None and gridk is None:
             # return gridx and gridk
             gridx, gridk = paint_utils.paint_cat_to_gridk(config_dict, column=cat_id,
