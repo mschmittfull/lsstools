@@ -99,7 +99,9 @@ class PicklesDB(object):
                     comp_dict = p[self.comp_key]
                     if 'pickle_fname' not in comp_dict:
                         comp_dict['pickle_fname'] = fname
-                    self.db.insert(comp_dict)
+                    comp_dict = dict(comp_dict)
+                    print('type:', type(comp_dict))
+                    self.db.insert(dict(comp_dict))
 
             # close and open to make sure it is written to disk
             self.db.close()

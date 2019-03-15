@@ -20,6 +20,7 @@ from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
 from nbodykit import logging
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
+from Pktuple import Pktuple
 
 """
 Store a collection of nbdodykit MeshSource objects, e.g. RealField objects.
@@ -31,8 +32,6 @@ Note: We store the same instances, so modifying meshsource elsewhere will change
 the data stored here. We recommend deleting meshsource always after storing it here.
 """
 
-# simple named tuple to store output of power spectrum measurements
-Pktuple = namedtuple('Pktuple', ['k', 'P', 'num_summands', 'info', 'info_id1', 'info_id2'])
 
 
 class Grid(object):

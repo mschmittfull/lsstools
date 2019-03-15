@@ -53,7 +53,10 @@ class TrfSpec:
         else:
             mydict['quadratic_sources2'] = None
 
-        mydict['sources_for_trf_fcn'] = self.sources_for_trf_fcn
+        if hasattr(self, 'sources_for_trf_fcn'):
+            mydict['sources_for_trf_fcn'] = self.sources_for_trf_fcn
+        else:
+            mydict['sources_for_trf_fcn'] = None
 
         mydict['target_field'] = self.target_field
 
