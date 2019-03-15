@@ -19,6 +19,8 @@ from nbodykit.source.mesh.bigfile import BigFileMesh
 from Grid import RealGrid, ComplexGrid
 from nbkit03_utils import get_cstat
 from nbodykit import logging
+from nbodykit.source.mesh.field import FieldMesh
+
 
 
 def paint_cat_to_gridk(
@@ -121,26 +123,26 @@ def paint_cat_to_gridk(
             for idir in [0,1,2]:
                 vi_label = 'tmp_V_%d' % idir
                 # this is the velocity / (a*H). units are Mpc/h
-                cat[vi_label] = cat[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                cat_nbk[vi_label] = cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
                 to_mesh_kwargs.update(dict(position='Position', value=vi_label))
                 mesh = cat_nbk.to_mesh(Nmesh=Ngrid, **to_mesh_kwargs)
                 if comm.rank == 0:
                     logger.info("mesh type: %s" % str(type(mesh)))
                     logger.info("mesh attrs: %s" % str(mesh.attrs))
-                # this is (1+delta)v_i/(aH) in k space  (if normalize were False would get rho*v_i/(aH))
-                outfield = mesh.to_complex_field(normalize=True)
+                # this is (1+delta)v_i/(aH) (if normalize were False would get rho*v_i/(aH))
+                outfield = FieldMesh(mesh.to_real_field(normalize=True))
                 # get nabla_i[(1+delta)v_i/(aH)]
                 def grad_i_fcn(k3vec, val, myidir=idir):
                     return -1.0j * k3vec[myidir]*val
-                outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber', out=outfield)
+                outfield = outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber')
                 # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(aH)]
                 if theta_k is None:
                     theta_k = FieldMesh(outfield.compute('complex'))
                 else:
                     theta_k = FieldMesh(theta_k.compute(mode='complex') + outfield.compute(mode='complex'))
 
-            # save theta(x) in outfield
-            outfield = FieldMesh(theta_k.compute(mode='real'))
+            # save theta(x) in outfield  (check data types again)
+            outfield = FieldMesh(theta_k.compute(mode='real')).to_real_field()
 
         else:
             raise Exception('Invalid paint_mode %s' % paint_mode)
@@ -186,10 +188,13 @@ def paint_cat_to_gridk(
     
     # print paint info
     if comm.rank == 0:
-        if normalize:
-            logger.info('painted 1+delta')
-        else:
-            logger.info('painted rho (normalize=False)')
+        if paint_mode in [None,'overdensity']:
+            if normalize:
+                logger.info('painted 1+delta')
+            else:
+                logger.info('painted rho (normalize=False)')
+        elif paint_mode == 'momentum_divergence':
+            logger.info('painted div[(1+delta)v/(aH)]')
         if hasattr(outfield, 'attrs'):
             logger.info("outfield.attrs: %s" % str(outfield.attrs))
 
