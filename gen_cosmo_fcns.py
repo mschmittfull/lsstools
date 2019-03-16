@@ -46,6 +46,12 @@ def generate_calc_Da(test_plot=False, N_integration=10000, cosmo=None, verbose=T
 
     return calc_Da
 
+def calc_f_log_growth(a=None, calc_Da=None, cosmo=None):
+    """Calculate f=dlnD/dlna"""
+    # see hamilton 2000 https://arxiv.org/abs/astro-ph/0006089
+    return -1.0 - cosmo.Om_m/2. + cosmo.Om_L + 5./2.*cosmo.Om_m/calc_Da(a)
+
+
 
 def generate_calc_chi(test_plot=False, N_integration=10000, cosmo=None):
     """
