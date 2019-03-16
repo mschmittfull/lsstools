@@ -510,10 +510,11 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
     # ################################################################################
     # Delete temporary files
     # ################################################################################
-    if delete_cache:
-        for fname in cache_fnames:
-            if os.path.exists(fname):
-                rmtree(fname)
+    # not working in parallel
+    # if delete_cache:
+    #     for fname in cache_fnames:
+    #         if os.path.exists(fname):
+    #             rmtree(fname)
         #os.system('rm -f %s' % fname)
     #os.system('rm -r %s' % paths['cache_path'])
 
