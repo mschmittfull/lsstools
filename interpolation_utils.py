@@ -36,9 +36,9 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
         # check that kin has all k bins
         if k_bin_width == 1.:
             # 18 Jan 2019: somehow need 0.99 factor for nbodykit 0.3 to get last k bin right.
-            kin_expected = np.arange(1,np.max(kin)*0.99/dk+1)*dk
+            #kin_expected = np.arange(1,np.max(kin)*0.99/dk+1)*dk
             # 16 Mar 2019: Fix expected k bins to match nbodykit for larger Ngrid
-            np.arange(1, kin.shape[0]+1)*dk
+            kin_expected = np.arange(1, kin.shape[0]+1)*dk
 
             if verbose:
                 print("kin:", kin)
