@@ -12,7 +12,7 @@ import sys
 
 
 def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None, bounds_error=False,
-                              Ngrid=None, L=None, k_bin_width=1.0, verbose=False):
+                              Ngrid=None, L=None, k_bin_width=1.0, verbose=True):
     """
     Interpolate following a fixed k binning scheme that's also used to measure power spectra
     in cy_power_estimator.pyx.
@@ -37,6 +37,12 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
         if k_bin_width == 1.:
             # 18 Jan 2019: somehow need 0.99 factor for nbodykit 0.3 to get last k bin right.
             kin_expected = np.arange(1,np.max(kin)*0.99/dk+1)*dk
+
+            if verbose:
+                print("kin:", kin)
+                print("kin_expected:", kin_expected)
+                print("kin/kin_expected (should be between 0.5 and 1.5):\n", kin/kin_expected)
+                
             # bin center is computed by averaging k within bin, so it's not exactly dk*i.
             if not np.allclose(kin, kin_expected, rtol=0.35):
                 print("kin:", kin)
