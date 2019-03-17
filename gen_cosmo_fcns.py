@@ -46,10 +46,26 @@ def generate_calc_Da(test_plot=False, N_integration=10000, cosmo=None, verbose=T
 
     return calc_Da
 
-def calc_f_log_growth(a=None, calc_Da=None, cosmo=None):
+
+def calc_f_log_growth_rate(a=None, calc_Da=None, cosmo=None, do_test=False):
     """Calculate f=dlnD/dlna"""
-    # see hamilton 2000 https://arxiv.org/abs/astro-ph/0006089
-    return -1.0 - cosmo.Om_m/2. + cosmo.Om_L + 5./2.*cosmo.Om_m/calc_Da(a)
+    # derived from formula for D
+    assert cosmo.Om_K == 0.
+    H_over_H0 = np.sqrt( cosmo.Om_r/a**4 + cosmo.Om_m/a**3 
+                         + cosmo.Om_L + cosmo.Om_K/a**2 )
+    f_analytical = 1./(a*H_over_H0)**2 * (
+        -2.*cosmo.Om_r/a**2 - 3./2.*cosmo.Om_m/a + 5./2.*cosmo.Om_m/calc_Da(a))
+
+    if do_test:
+        # compute numerically and compare
+        avec = np.linspace(1.0e-4, 1.0, 1000)
+        d_D_d_a = np.interp(a, 0.5*(avec[1:]+avec[:-1]), np.diff(calc_Da(avec))/np.diff(avec))
+        f_numerical = a/calc_Da(a) * d_D_d_a
+        print('f_numerical=%g' % f_numerical)
+        print('f_numerical/f_analytical-1 = %g' % (f_numerical/f_analytical-1.))
+        assert np.isclose(f_numerical, f_analytical, rtol=1e-4)
+
+    return f_analytical
 
 
 
