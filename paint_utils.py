@@ -8,6 +8,7 @@ import cPickle
 import numpy as np
 import os
 from collections import OrderedDict
+from mpi4py import MPI
 from scipy import interpolate as interp
 import random
 import glob
@@ -20,6 +21,25 @@ from Grid import RealGrid, ComplexGrid
 from nbkit03_utils import get_cstat
 from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
+
+
+def read_ms_hdf5_catalog(fname, root='Subsample/'):
+    from nbodykit import CurrentMPIComm
+    comm = CurrentMPIComm.get()
+    logger = logging.getLogger('paint_utils')
+    
+    if comm.rank == 0:
+        logger.info("Try reading %s" % fname)
+
+    cat_nbk = HDFCatalog(fname, root=root)
+    # Positions in Marcel hdf5 catalog files go from 0 to 1 but nbkit requires 0 to boxsize
+    maxpos = get_cstat(cat_nbk['Position'].compute(), 'max')
+    if (maxpos < 0.1*np.min(cat_nbk.attrs['BoxSize'][:])) or maxpos < 1.5:
+        cat_nbk['Position'] = cat_nbk['Position'] * cat_nbk.attrs['BoxSize']
+    if comm.rank == 0:
+        logger.info("cat: %s" % str(cat_nbk))
+        logger.info("columns: %s" % str(cat_nbk.columns))
+    return cat_nbk
 
 
 
@@ -36,7 +56,7 @@ def paint_cat_to_gridk(
 
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
-    logger = logging.getLogger('rec_utils')
+    logger = logging.getLogger('paint_utils')
 
     logger.info("Rank %d: paint_cat_to_gridk" % comm.rank)
 
@@ -60,12 +80,13 @@ def paint_cat_to_gridk(
     if PaintGrid_config['Painter']['plugin'] != 'DefaultPainter':
         raise Exception("nbkit 0.3 wrapper not implemented for plugin %s" % str(
             PaintGrid_config['plugin']))
-    implemented_painter_keys = ['plugin', 'normalize', 'setMean', 'paint_mode', 'velocity_column']
+    implemented_painter_keys = ['plugin', 'normalize', 'setMean', 'paint_mode', 'velocity_column',
+        'fill_empty_cells', 'randseed_for_fill_empty_cells']
     for k in PaintGrid_config['Painter'].keys():
         if k not in implemented_painter_keys:
             raise Exception("config key %s not implemented in wrapper" % str(k))
 
-    # TODO: implement keys 'weight' (different particles contribute with different weight or mass)
+    # TODO: implement keys 'weight' or weight_ptcles_by (different particles contribute with different weight or mass)
 
 
 
@@ -80,17 +101,7 @@ def paint_cat_to_gridk(
 
         # TODO: get 'same value error' when using mass weighted columns b/c nbk03
         # thinks two columns have same name. probably string issue.
-        if comm.rank == 0:
-            logger.info("Try reading %s" % PaintGrid_config['DataSource']['path'])
-        cat_nbk = HDFCatalog(PaintGrid_config['DataSource']['path'],
-                             root='Subsample/')
-        # Positions in Marcel hdf5 catalog files go from 0 to 1 but nbkit requires 0 to boxsize
-        maxpos = get_cstat(cat_nbk['Position'].compute(), 'max')
-        if (maxpos < 0.1*np.min(cat_nbk.attrs['BoxSize'][:])) or maxpos < 1.5:
-            cat_nbk['Position'] = cat_nbk['Position'] * cat_nbk.attrs['BoxSize']
-        if comm.rank == 0:
-            logger.info("cat: %s" % str(cat_nbk))
-            logger.info("columns: %s" % str(cat_nbk.columns))
+        cat_nbk = read_ms_hdf5_catalog(PaintGrid_config['DataSource']['path'])
 
         # Paint options
         if grid_ptcle2grid_deconvolution is None:
@@ -118,7 +129,7 @@ def paint_cat_to_gridk(
         elif paint_mode == 'momentum_divergence':
             # Paint momentum divergence div((1+delta)v/(aH)).
             # See https://nbodykit.readthedocs.io/en/latest/cookbook/painting.html#Painting-the-Line-of-sight-Momentum-Field. 
-            assert PaintGrid_config['Painter'].has_key('velocity_column')
+            assert PaintGrid_config['Painter']['velocity_column'] is not None
             theta_k = None
             for idir in [0,1,2]:
                 vi_label = 'tmp_V_%d' % idir
@@ -131,6 +142,52 @@ def paint_cat_to_gridk(
                     logger.info("mesh attrs: %s" % str(mesh.attrs))
                 # this is (1+delta)v_i/(aH) (if normalize were False would get rho*v_i/(aH))
                 outfield = FieldMesh(mesh.to_real_field(normalize=True))
+                # get nabla_i[(1+delta)v_i/(aH)]
+                def grad_i_fcn(k3vec, val, myidir=idir):
+                    return -1.0j * k3vec[myidir]*val
+                outfield = outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber')
+                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(aH)]
+                if theta_k is None:
+                    theta_k = FieldMesh(outfield.compute('complex'))
+                else:
+                    theta_k = FieldMesh(theta_k.compute(mode='complex') + outfield.compute(mode='complex'))
+
+            # save theta(x) in outfield  (check data types again)
+            outfield = FieldMesh(theta_k.compute(mode='real')).to_real_field()
+
+
+        elif paint_mode == 'velocity_divergence':
+            # paint div v, and fill empty cells according to some rule
+            assert PaintGrid_config['Painter']['velocity_column'] is not None
+            assert PaintGrid_config['Painter']['fill_empty_cells'] is not None
+            assert PaintGrid_config['Painter']['randseed_for_fill_empty_cells'] is not None
+
+            vi_labels = []
+            for idir in [0,1,2]:
+                vi_label = 'tmp_V_%d' % idir
+                vi_labels.append(vi_label)
+                # this is the velocity / (a*H). units are Mpc/h
+                cat_nbk[vi_label] = cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
+            
+            # call extra function to do the painting, saving result in gridx.G[chi_cols]
+            paint_chicat_to_gridx(
+                chi_cols=vi_labels, 
+                cat=cat_nbk,
+                weight_ptcles_by=PaintGrid_config['Painter'].get('weight_ptcles_by', None), 
+                fill_empty_chi_cells=PaintGrid_config['Painter']['fill_empty_cells'],
+                RandNeighbSeed=PaintGrid_config['Painter']['randseed_for_fill_empty_cells'],
+                gridx=gridx, gridk=gridk,
+                cache_path=cache_path, do_plot=False, Ngrid=Ngrid, kmax=kmax)
+
+            # delete catalog columns b/c not needed any more
+            for vi in vi_labels:
+                cat_nbk[vi] = None
+
+            # get divergence
+            theta_k = None
+            for idir, vi in enumerate(vi_labels):
+                # this is v_i/(aH)
+                outfield = FieldMesh(gridx.G[vi].compute(mode='real'))
                 # get nabla_i[(1+delta)v_i/(aH)]
                 def grad_i_fcn(k3vec, val, myidir=idir):
                     return -1.0j * k3vec[myidir]*val
@@ -176,15 +233,10 @@ def paint_cat_to_gridk(
                 raise Exception('Found cmean=%g. Are you sure you want to normalize?' % cmean)
             outfield.apply(lambda x,v: v/cmean, kind="relative", out=outfield)
 
-
         #raise Exception('todo: normalize manually')
-
-
     else:
         raise Exception("Unsupported DataSource plugin %s" % 
                         PaintGrid_config['DataSource']['plugin'])
-
-
     
     # print paint info
     if comm.rank == 0:
@@ -195,6 +247,8 @@ def paint_cat_to_gridk(
                 logger.info('painted rho (normalize=False)')
         elif paint_mode == 'momentum_divergence':
             logger.info('painted div[(1+delta)v/(aH)]')
+        else:
+            logger.info('painted with paint_mode %s' % paint_mode)
         if hasattr(outfield, 'attrs'):
             logger.info("outfield.attrs: %s" % str(outfield.attrs))
 
@@ -216,7 +270,7 @@ def paint_cat_to_gridk(
         if hasattr(outfield, 'attrs'):
             logger.info("outfield.attrs: %s" % str(outfield.attrs))
 
-    # should simplify, keep for backwards compatibility
+    # Save attrs. Should simplify, keep for backwards compatibility
     if hasattr(outfield, 'attrs'):
         field_attrs = convert_np_arrays_to_lists(outfield.attrs)
     else:
@@ -265,8 +319,6 @@ def paint_cat_to_gridk(
         tmp_gridx.convert_to_weighted_uniform_catalog(col='bla', uni_cat_Nptcles_per_dim=gridx.Ngrid,
             fill_value_negative_mass=0.)
 
-
-
     if comm.rank == 0:
         logger.info("column_info: %s" % str(gridx.column_infos[column]))
     
@@ -308,31 +360,246 @@ def paint_cat_to_gridk(
 
 
 
+def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
+                          weight_ptcles_by=None, 
+                          cache_path=None, do_plot=False,
+                          Ngrid=None, fill_empty_chi_cells='RandNeighb',
+                          RandNeighbSeed=1234,
+                          kmax=None):
+    """
+    Helper function that reads in displacement field 'chi_col_{0,1,2}' from catalog
+    and paints it to a regular grid. 
+    The result is stored in gridx.G['chi_col_{0,1,2}'].
+    Assume that catalog has 'weighted_chi_col_{0,1,2}' column which is used for painting.
+
+    chi_cols : 3-tuple of strings, (chi_col_0, chi_col_1, chi_col_2)
+    """
+    from nbodykit import CurrentMPIComm
+    from nbodykit.mpirng import MPIRandomState
+
+    comm = CurrentMPIComm.get()
+    logger = logging.getLogger('paint_utils')
+
+    # Read catalog
+    #cat = read_ms_hdf5_catalog(cat_fname)
+
+    ## Get mass density rho so we can normalize chi later. Assume mass=1, or given by
+    # weight_ptcles_by.
+    # This is to get avg chi if multiple ptcles are in same cell.
+    # 1 Sep 2017: Want chi_avg = sum_i m_i chi_i / sum_j m_i where m_i is particle mass,
+    # because particle mass says how much the average should be dominated by a single ptcle
+    # that can represent many original no-mass particles.
+    
+    # Compute rho4chi = sum_i m_i
+    rho4chi, rho4chi_attrs = weighted_paint_cat_to_delta(
+        cat, 
+        weight=weight_ptcles_by,
+        weighted_paint_mode='sum',
+        normalize=False, # want rho not 1+delta
+        Nmesh=Ngrid,
+        set_mean=None)
+
+
+
+    ## Paint chi to grid using nbodykit. Do usual painting of particles to grid, but
+    # use chi component as weight. 
+    # This should give rho(x)chi(x) = sum_i m_i chi(x_i) where m_i is ptcle mass.
+    for chi_col in chi_cols:
+        print("Paint chi %s" % chi_col)
+        # compute chi weighted by ptcle mass chi(x)m(x)
+        weighted_col = 'TMP weighted %s' % chi_col
+        if weight_ptcles_by is not None:
+            cat[weighted_col] = cat[weight_ptcles_by] * cat[chi_col]
+        else:
+            # weight 1 for each ptcle
+            cat[weighted_col] = cat[chi_col]
+        thisChi, thisChi_attrs = weighted_paint_cat_to_delta(
+            cat, 
+            weight=weighted_col, # chi weighted by ptcle mass
+            weighted_paint_mode='sum',
+            normalize=False, # want rho not 1+delta (TODO: check)
+            Nmesh=Ngrid,
+            set_mean=None)
+
+
+        # Normalize Chi by dividing by rho: So far, our chi will get larger if there are 
+        # more particles, because it sums up displacements over all particles. 
+        # To normalize, divide by rho (=mass density on grid if all ptcles have mass m=1).
+        # (i.e. divide by number of contributions to a cell)
+        if fill_empty_chi_cells in [None, 'SetZero']:
+            # Set chi=0 if there are not ptcles in grid cell. Used until 7 April 2017.
+            # Seems ok for correl coeff and BAO, but gives large-scale bias in transfer
+            # function or broad-band power because violates mass conservation.
+            thisChi = FieldMesh(np.where(
+                rho4chi.compute(mode='real')==0,
+                rho4chi.compute(mode='real')*0,
+                thisChi.compute(mode='real')/rho4chi.compute(mode='real')))
+            #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0, thisChi/gridx.G['rho4chi'])
+
+        elif fill_empty_chi_cells in ['RandNeighb', 'AvgAndRandNeighb']:
+            # Set chi in empty cells equal to a random neighbor cell. Do this until all empty
+            # cells are filled.
+            # First set all empty cells to nan.
+            #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0+np.nan, thisChi/gridx.G['rho4chi'])
+            thisChi = thisChi/rho4chi # get nan when rho4chi=0
+            if True:
+                # test if nan ok
+                ww1 = np.where(rho4chi==0)
+                #ww2 = np.where(np.isnan(thisChi.compute(mode='real')))
+                ww2 = np.where(np.isnan(thisChi))
+                assert np.allclose(ww1, ww2)
+                del ww1, ww2
+
+            # Progressively replace nan by random neighbors:
+            Ng = Ngrid
+            #thisChi = thisChi.reshape((Ng,Ng,Ng))
+            logger.info('thisChi.shape: %s' % str(thisChi.shape))
+            #assert thisChi.shape == (Ng,Ng,Ng)
+            # indices of empty cells on this rank
+            ww = np.where(np.isnan(thisChi))
+            # number of empty cells across all ranks
+            Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
+            have_empty_cells = (Nfill > 0)
+
+            if fill_empty_chi_cells == 'RandNeighb':
+                while have_empty_cells:
+                    if comm.rank == 0:
+                        logger.info("Fill %d empty chi cells (%g percent) using random neighbors" % (
+                            Nfill, Nfill/float(Ng)**3*100.))
+                    if Nfill/float(Ng)**3 >= 0.999:
+                        raise Exception("Stop because too many empty chi cells")
+                    # draw -1,0,+1 for each empty cell, in 3 directions
+                    # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
+                    rng = MPIRandomState(comm, seed=RandNeighbSeed, size=ww[0].shape[0], chunksize=100000)
+                    r = rng.uniform(low=-1, high=2, dtype='int', itemshape=(3,))
+
+                    if False:
+                        # old serial code
+                        # replace nan by random neighbors
+                        thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
+                        # recompute indices of nan cells
+                        ww = np.where(np.isnan(thisChi))
+                        have_empty_cells = (ww[0].shape[0] > 0)
+                    else:
+                        # parallel version
+                        # maybe use RealField readout, see http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.RealField
+                        # want field at positions [(ww+r)%Ng] dx
+                        BoxSize = cat.attrs['BoxSize']
+                        dx = BoxSize/(float(Ng))
+                        pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
+                        # readout
+                        readout_window = 'nnb'
+                        layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
+                        # interpolate field to particle positions (use pmesh 'readout' function)
+                        thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
+                        thisChi[ww] = thisChi_neighbors
+                        ww = np.where(np.isnan(thisChi))
+                        Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
+                        have_empty_cells = (Nfill > 0)
+
+                raise Exception('TODOOO: continue below')
+
+
+            elif fill_empty_chi_cells == 'AvgAndRandNeighb':
+                raise Exception('Not implemented any more')
+                # while have_empty_cells:
+                #     print("Fill %d empty chi cells (%g percent) using avg and random neighbors" % (
+                #         ww[0].shape[0],ww[0].shape[0]/float(Ng)**3*100.))
+                #     # first take average (only helps empty cells surrounded by filled cells)
+                #     thisChi[ww[0],ww[1],ww[2]] = 0.0
+                #     for r0 in range(-1,2):
+                #         for r1 in range(-1,2):
+                #             for r2 in range(-1,2):
+                #                 if (r0==0) and (r1==0) and (r2==0):
+                #                     # do not include center point in avg b/c this is nan
+                #                     continue
+                #                 else:
+                #                     # average over 27-1 neighbor points
+                #                     thisChi[ww[0],ww[1],ww[2]] += thisChi[(ww[0]+r0)%Ng, (ww[1]+r1)%Ng, (ww[2]+r2)%Ng]/26.0
+                #     # get indices of cells that are still empty (happens if a neighbor was nan above)
+                #     ww = np.where(np.isnan(thisChi))
+                #     have_empty_cells = (ww[0].shape[0] > 0)
+                #     if have_empty_cells:
+                #         # draw -1,0,+1 for each empty cell, in 3 directions
+                #         r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
+                #         # replace nan by random neighbors
+                #         thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
+                #         # recompute indices of nan cells
+                #         ww = np.where(np.isnan(thisChi))
+                #         have_empty_cells = (ww[0].shape[0] > 0)
+                
+                
+        else:
+            raise Exception("Invalid fill_empty_chi_cells option: %s" % str(
+                fill_empty_chi_cells))
+        # Save as RealGrid entry. 
+        gridx.append_column(chi_col, thisChi)
+
+        # release memory
+        del thisChi
+        
+        # If kmax is not None, apply smoothing
+        if kmax is not None:
+            col = chi_col
+            gridk.append_column(col, gridx.fft_x2k(col, drop_column=True))
+            gridk.apply_smoothing(col, mode='Gaussian', R=0.0, kmax=kmax)
+            gridx.append_column(col, gridk.fft_k2x(col, drop_column=True))
+
+
+        # plot slice
+        if do_plot:
+            gridx.plot_slice(chi_col, 'slice4chi_%s.pdf'%chi_col)
+
+    gridx.drop_column('rho4chi')
+    # output is stored in gridx.G['chi_col_{0,1,2}'], nothing to return.
+
+
+
 def weighted_paint_cat_to_delta(
         cat, weight=None,
         weighted_paint_mode=None,
+        normalize=True,
         Nmesh=None,
         to_mesh_kwargs={'window': 'cic', 'compensated': False, 'interlaced': False},
-        set_mean = 0.0,
+        set_mean = None,
         verbose=True):
+    """
+    - weighted_paint_mode='sum': In each cell, sum up the weight of all particles in the cell.
+        So this gets larger if there are more particles in a cell. 
+    - weighted_paint_mode='avg': In each cell, sum up the weight of all particles in the cell
+        and divide by the number of contributions. This does not increase if there are more
+        particles in a cell with the same weight.
+    Note: In nbodykit nomenclature this is called 'value' instead of 'weight', but only implements
+        our 'sum' not 'avg' mode (it seems).
 
-    if weight is None:
-        raise Exception("Must specify weight")
+    NOTE: Looks like this is actually not used anywhere so far.
+    """
+
     if weighted_paint_mode not in ['sum','avg']:
         raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
+
+    assert 'value' not in to_mesh_kwargs.keys()
     
     # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute
     # equally. Later we divide by number of contributions.
-    meshsource = cat.to_mesh(Nmesh=Nmesh, value=weight, **to_mesh_kwargs)
+    if weight is not None:
+        meshsource = cat.to_mesh(Nmesh=Nmesh, value=weight, **to_mesh_kwargs)
+    else:
+        # no weight so assume each ptcle has weight 1
+        meshsource = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs)
     meshsource.attrs['weighted_paint_mode'] = weighted_paint_mode
 
     # get outfield = 1+delta
-    outfield = meshsource.paint(mode='real')
+    #outfield = meshsource.paint(mode='real')
+    # Paint. If normalize=True, outfield = 1+delta; if normalize=False: outfield=rho
+    outfield = meshsource.to_real_field(normalize=normalize)
 
     if weighted_paint_mode=='avg':
         # count contributions per cell (no value or weight).
         # outfield_count = 1+delta_unweighted = number of contributions per cell
-        outfield_count = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs).paint(mode='real')
+        # (or rho_unweighted if normalize=False)
+        #outfield_count = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs).paint(mode='real')
+        outfield_count = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs).to_real_field(normalize=normalize)
 
     if verbose:
         comm = meshsource.comm
@@ -348,7 +615,8 @@ def weighted_paint_cat_to_delta(
         del outfield_count
     
     # set the mean
-    outfield = outfield - outfield.cmean() + set_mean
+    if set_mean is not None:
+        outfield = outfield - outfield.cmean() + set_mean
 
     if verbose:
         # print some info:
@@ -356,6 +624,7 @@ def weighted_paint_cat_to_delta(
               np.min(outfield), np.mean(outfield), np.max(outfield), np.mean((outfield-1.)**2)**0.5)
 
     return outfield, meshsource.attrs
+
 
 
 

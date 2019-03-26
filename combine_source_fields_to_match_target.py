@@ -86,7 +86,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
                 'normalize': True, # not used when paint_mode='momentum_divergence' 
                 'setMean': 0.0,
                 'paint_mode': cat_opts.get('paint_mode', 'overdensity'),
-                'velocity_column': cat_opts.get('velocity_column', None)
+                'velocity_column': cat_opts.get('velocity_column', None),
+                'fill_empty_cells': cat_opts.get('fill_empty_cells', None),
+                'randseed_for_fill_empty_cells': cat_opts.get('randseed_for_fill_empty_cells', None)
                 }
             }
 
