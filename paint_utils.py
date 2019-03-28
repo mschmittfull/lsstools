@@ -181,7 +181,7 @@ def paint_cat_to_gridk(
 
             # delete catalog columns b/c not needed any more
             for vi in vi_labels:
-                cat_nbk[vi] = None
+                del cat_nbk[vi]
 
             # get divergence
             theta_k = None
@@ -275,11 +275,20 @@ def paint_cat_to_gridk(
         field_attrs = convert_np_arrays_to_lists(outfield.attrs)
     else:
         field_attrs = {}
+    Ntot = None
+    if 'mesh' in vars():
+        Ntot = mesh.attrs.get('Ntot', np.nan)
+    elif 'cat_nbk' in vars():
+        Ntot = cat_nbk.attrs.get('Ntot', np.nan)
     infodict = {
-        'MS_infodict': {'Nbkit_config': PaintGrid_config,
-            'cat_attrs': convert_np_arrays_to_lists(mesh.attrs)},
-        'Ntot': mesh.attrs.get('Ntot', np.nan),
-        'field_attrs': field_attrs}
+        'MS_infodict': {'Nbkit_config': PaintGrid_config},
+        'field_attrs': field_attrs,
+        'Ntot': Ntot}
+    if 'mesh' in vars():
+        infodict['MS_infodict']['cat_attrs'] = convert_np_arrays_to_lists(mesh.attrs)
+    elif 'cat_nbk' in vars():
+        infodict['MS_infodict']['cat_attrs'] = convert_np_arrays_to_lists(cat_nbk.attrs)
+
     column_info = {'Nbkit_infodict': infodict}
 
 
@@ -473,34 +482,37 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                     # draw -1,0,+1 for each empty cell, in 3 directions
                     # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
                     rng = MPIRandomState(comm, seed=RandNeighbSeed+i_iter*100, size=ww[0].shape[0], chunksize=100000)
-                    r = rng.uniform(low=-1, high=2, dtype='int', itemshape=(3,))
+                    r = rng.uniform(low=-2, high=2, dtype='int', itemshape=(3,))
+                    assert np.all(r>=-1)
+                    assert np.all(r<=1)
 
-                    if False:
-                        # old serial code
-                        # replace nan by random neighbors
-                        thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
-                        # recompute indices of nan cells
-                        ww = np.where(np.isnan(thisChi))
-                        have_empty_cells = (ww[0].shape[0] > 0)
-                    else:
-                        # parallel version
-                        # maybe use RealField readout, see http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.RealField
-                        # want field at positions [(ww+r)%Ng] dx
-                        BoxSize = cat.attrs['BoxSize']
-                        dx = BoxSize/(float(Ng))
-                        pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
-                        # readout
-                        readout_window = 'nnb'
-                        layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
-                        # interpolate field to particle positions (use pmesh 'readout' function)
-                        thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
-                        thisChi[ww] = thisChi_neighbors
-                        ww = np.where(np.isnan(thisChi))
-                        Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
-                        have_empty_cells = (Nfill > 0)
-                        comm.barrier()
-
-                raise Exception('TODOOO: continue below')
+                    # # old serial code
+                    # # replace nan by random neighbors
+                    # thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
+                    # # recompute indices of nan cells
+                    # ww = np.where(np.isnan(thisChi))
+                    # have_empty_cells = (ww[0].shape[0] > 0)
+                   
+                    # New parallel code.
+                    # Want field at positions [(ww+r)%Ng] dx.
+                    # Result depends on number of cores, not sure how to fix, leave for later.
+                    BoxSize = cat.attrs['BoxSize']
+                    dx = BoxSize/(float(Ng))
+                    #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
+                    # more carefully:
+                    pos_wanted = np.zeros((ww[0].shape[0],3))+np.nan
+                    for idir in [0,1,2]:
+                        pos_wanted[:,idir] = ( (np.array(ww[idir]) + r[:,idir]) % Ng ) * dx[idir] # ranges from 0 to BoxSize
+                    # readout
+                    readout_window = 'nnb'
+                    layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
+                    # interpolate field to particle positions (use pmesh 'readout' function)
+                    thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
+                    thisChi[ww] = thisChi_neighbors
+                    ww = np.where(np.isnan(thisChi))
+                    Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
+                    have_empty_cells = (Nfill > 0)
+                    comm.barrier()
 
 
             elif fill_empty_chi_cells == 'AvgAndRandNeighb':
