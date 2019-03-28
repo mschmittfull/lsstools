@@ -462,7 +462,9 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
             have_empty_cells = (Nfill > 0)
 
             if fill_empty_chi_cells == 'RandNeighb':
+                i_iter = -1
                 while have_empty_cells:
+                    i_iter += 1
                     if comm.rank == 0:
                         logger.info("Fill %d empty chi cells (%g percent) using random neighbors" % (
                             Nfill, Nfill/float(Ng)**3*100.))
@@ -470,7 +472,7 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                         raise Exception("Stop because too many empty chi cells")
                     # draw -1,0,+1 for each empty cell, in 3 directions
                     # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
-                    rng = MPIRandomState(comm, seed=RandNeighbSeed, size=ww[0].shape[0], chunksize=100000)
+                    rng = MPIRandomState(comm, seed=RandNeighbSeed+i_iter*100, size=ww[0].shape[0], chunksize=100000)
                     r = rng.uniform(low=-1, high=2, dtype='int', itemshape=(3,))
 
                     if False:
@@ -496,6 +498,7 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                         ww = np.where(np.isnan(thisChi))
                         Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
                         have_empty_cells = (Nfill > 0)
+                        comm.barrier()
 
                 raise Exception('TODOOO: continue below')
 
