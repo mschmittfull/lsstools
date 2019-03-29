@@ -541,23 +541,33 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                             assert isinstance(field, RealField)
                             return tuple(list(index + field.start))
 
-                        def ltoc_index_arr(field, index_arr):
+                        def ltoc_index_arr(field, lindex_arr):
                             assert isinstance(field, RealField)
-                            assert type(index_arr)==np.ndarray
-                            assert np.all(index_arr>=0)
-                            return index_arr + field.start
+                            assert type(lindex_arr) == np.ndarray
+                            assert np.all(lindex_arr>=0)
+                            assert cindex_arr.shape[-1] == field.ndim
+                            return lindex_arr + field.start
 
-                        def cgetitem_index_arr(field, index_arr):
+                        def cgetitem_index_arr(field, cindex_arr):
                             assert isinstance(field, RealField)
-                            assert type(index_arr)==np.ndarray
-                            assert np.all(index_arr>=0)
-                            raise Exception('not implemented yet')
+                            assert type(cindex_arr) == np.ndarray
+                            assert np.all(cindex_arr>=0)
+                            assert cindex_arr.shape[-1] == field.ndim
+                            value = np.zeros(cindex_arr.shape[:-1], dtype=field.value.dtype)
+                            value[ (cindex_arr>=field.start) && (cindex_arr<field.start+field.shape) ] = field[cindex-field.start]
+                            value = field.comm.allreduce(value, op=MPI.SUM)
+                            return value
+                            # TODO: want to get field[cindex_arr-field.start] but only if
+                            # index_arr item is between field.start and field.start+field.shape.
+                            #
+                            # Essentially want this (work with np.where maybe?):
+                            # if all(index1 >= self.start) and all(index1 < self.start + self.shape):
+                            #     return field[index1 - self.start]
+                            # else:
+                            #     return 0
+                            # THen run allreduce to get field value across all ranks.
+                            #raise Exception('not implemented yet')
 
-
-                        # negative indexing
-                        # index1[index1 < 0] += self.Nmesh[index1 < 0]
-                        # if all(index1 >= self.start) and all(index1 < self.start + self.shape):
-                        #     return value, tuple(list(index1 - self.start) + list(index[self.ndim:]))
 
                         thisChi_neighbors = None
                         my_cindex_wanted = None
@@ -571,18 +581,24 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                                 #cww = np.array([ 
                                 #    ltoc(field=thisChi, index=[ww[0][i],ww[1][i],ww[2][i]]) 
                                 #    for i in range(ww[0].shape[0]) ])
-                                cww = ltoc_index_arr(field=thisChi, index_arr=wwarr)
+                                cww = ltoc_index_arr(field=thisChi, lindex_arr=wwarr)
                                 #logger.info('cww: %s' % str(cww))
 
                                 #my_cindex_wanted = [(cww[:,0]+r[:,0])%Ng, (cww[1][:]+r[:,1])%Ng, (cww[2][:]+r[:,2])%Ng]
                                 my_cindex_wanted = (cww+r) % Ng
                                 #logger.info('my_cindex_wanted: %s' % str(my_cindex_wanted))
                             cindex_wanted = comm.bcast(my_cindex_wanted, root=root)
-                            print('cgetitem (slow)... [should use cgetitem_index_arr]')
-                            glob_thisChi_neighbors = [
-                                thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]]) 
-                                for i in range(cindex_wanted.shape[0]) ]
-                            print('cgetitem done')
+                            if False:
+                                print('cgetitem (slow)... [should use cgetitem_index_arr]')
+                                glob_thisChi_neighbors = [
+                                    thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]]) 
+                                    for i in range(cindex_wanted.shape[0]) ]
+                                print('cgetitem (slow) done')
+                            else:
+                                print('cgetitem (fast)... ')
+                                glob_thisChi_neighbors = cgetitem_index_arr(thisChi, cindex_wanted) 
+                                print('cgetitem (fast) done')
+
 
                             if comm.rank == root:
                                 thisChi_neighbors = np.array(glob_thisChi_neighbors)
