@@ -22,7 +22,7 @@ from nbkit03_utils import get_cstat
 from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
-
+from pm_utils import ltoc_index_arr, cgetitem_index_arr
 
 def read_ms_hdf5_catalog(fname, root='Subsample/'):
     from nbodykit import CurrentMPIComm
@@ -383,6 +383,12 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
     Assume that catalog has 'weighted_chi_col_{0,1,2}' column which is used for painting.
 
     chi_cols : 3-tuple of strings, (chi_col_0, chi_col_1, chi_col_2)
+
+    fill_empty_chi_cells : string
+        - None, 'SetZero': Set empty cells to 0.
+        - 'RandNeighb': Fill using value at random neighbor cells.
+        - 'RandNeighbReadout': Fill using value at random neighbor cells (same as RandNeighb but other implementation)
+        - 'AvgAndRandNeighb': Not implemented in parallel version.
     """
     from nbodykit import CurrentMPIComm
     from nbodykit.mpirng import MPIRandomState
@@ -446,7 +452,7 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                 thisChi.compute(mode='real')/rho4chi.compute(mode='real')))
             #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0, thisChi/gridx.G['rho4chi'])
 
-        elif fill_empty_chi_cells in ['RandNeighb', 'AvgAndRandNeighb']:
+        elif fill_empty_chi_cells in ['RandNeighb', 'RandNeighbReadout', 'AvgAndRandNeighb']:
             # Set chi in empty cells equal to a random neighbor cell. Do this until all empty
             # cells are filled.
             # First set all empty cells to nan.
@@ -471,7 +477,7 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
             Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
             have_empty_cells = (Nfill > 0)
 
-            if fill_empty_chi_cells == 'RandNeighb':
+            if fill_empty_chi_cells in ['RandNeighb','RandNeighbReadout']:
                 i_iter = -1
                 while have_empty_cells:
                     i_iter += 1
@@ -487,88 +493,40 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                     assert np.all(r>=-1)
                     assert np.all(r<=1)
 
-                    # # old serial code
-                    # # replace nan by random neighbors
+                    # Old serial code to replace nan by random neighbors.
                     # thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
-                    # # recompute indices of nan cells
-                    # ww = np.where(np.isnan(thisChi))
-                    # have_empty_cells = (ww[0].shape[0] > 0)
                    
-                    if False:
-                        # New parallel code, attempt 1.
-                        # Use readout to get field at positions [(ww+r)%Ng] dx.
-                        # Result depends on number of cores, not sure how to fix, leave for later.
+                    if fill_empty_chi_cells == 'RandNeighbReadout':
+                        # New parallel code, 1st implementation.
+                        # Use readout to get field at positions [(ww+rank_offset+r)%Ng] dx.
                         BoxSize = cat.attrs['BoxSize']
                         dx = BoxSize/(float(Ng))
                         #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
                         # more carefully:
                         pos_wanted = np.zeros((ww[0].shape[0],3))+np.nan
                         for idir in [0,1,2]:
-                            # TODOOO: what index corresponds to what position? 
-                            pos_wanted[:,idir] = ( (np.array(ww[idir]) + r[:,idir]) % Ng ) * dx[idir] - 0*BoxSize[idir]/2.0 # ranges from 0..BoxSize
+                            pos_wanted[:,idir] = ( (np.array(ww[idir]+thisChi.start[idir]) + r[:,idir]) % Ng ) * dx[idir] # ranges from 0..BoxSize
 
                         # use readout to get neighbors
                         readout_window = 'nnb'
                         layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
                         # interpolate field to particle positions (use pmesh 'readout' function)
                         thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
-                        # POSSIBLE BUG: not sure if indexing of thisChi is consistent with pos_wanted offset and units, i.e.
-                        # might be reading out field from wrong locations...
-                        # YES: rank 1 has slab offset, so small indices should not start at x=0 but x=x_offset.
-                        if True:
-                            # print dbg info (rank 0 ok, rank 1 fails)
+                        if False:
+                            # print dbg info
                             for ii in range(10000,10004):
                                 if comm.rank == 1:
-                                    logger.info('ww: %s' % str([ww[0][ii], ww[1][ii], ww[2][ii]]))
-                                    logger.info('chi[ww]: %g' % thisChi[ww[0][ii], ww[1][ii], ww[2][ii]])
                                     logger.info('chi manual neighbor: %g' %  
                                         thisChi[(ww[0][ii]+r[ii,0])%Ng, (ww[1][ii]+r[ii,1])%Ng, (ww[2][ii]+r[ii,2])%Ng])
                                     logger.info('chi readout neighbor: %g' % thisChi_neighbors[ii])
-
-
                         thisChi[ww] = thisChi_neighbors
-                        #print('neighbors:', thisChi_neighbors)
-                        raise Exception('dbg me')
 
-                    if True:
-                        # New parallel code, attempt 2.
-                        # Use collective getitem.
+                    elif fill_empty_chi_cells == 'RandNeighb':
+                        # New parallel code, 2nd implementation.
+                        # Use collective getitem and only work with indices.
                         # http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.Field.cgetitem.
                         
                         # Note ww are indices of local slab, need to convert to global indices.
-                        def ltoc(field, index):
-                            """Convert local to collective index, inverting pm.pmesh.Field._ctol."""
-                            assert isinstance(field, RealField)
-                            return tuple(list(index + field.start))
-
-                        def ltoc_index_arr(field, lindex_arr):
-                            assert isinstance(field, RealField)
-                            assert type(lindex_arr) == np.ndarray
-                            assert np.all(lindex_arr>=0)
-                            assert cindex_arr.shape[-1] == field.ndim
-                            return lindex_arr + field.start
-
-                        def cgetitem_index_arr(field, cindex_arr):
-                            assert isinstance(field, RealField)
-                            assert type(cindex_arr) == np.ndarray
-                            assert np.all(cindex_arr>=0)
-                            assert cindex_arr.shape[-1] == field.ndim
-                            value = np.zeros(cindex_arr.shape[:-1], dtype=field.value.dtype)
-                            value[ (cindex_arr>=field.start) && (cindex_arr<field.start+field.shape) ] = field[cindex-field.start]
-                            value = field.comm.allreduce(value, op=MPI.SUM)
-                            return value
-                            # TODO: want to get field[cindex_arr-field.start] but only if
-                            # index_arr item is between field.start and field.start+field.shape.
-                            #
-                            # Essentially want this (work with np.where maybe?):
-                            # if all(index1 >= self.start) and all(index1 < self.start + self.shape):
-                            #     return field[index1 - self.start]
-                            # else:
-                            #     return 0
-                            # THen run allreduce to get field value across all ranks.
-                            #raise Exception('not implemented yet')
-
-
                         thisChi_neighbors = None
                         my_cindex_wanted = None
                         for root in range(comm.size):
@@ -588,16 +546,12 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                                 my_cindex_wanted = (cww+r) % Ng
                                 #logger.info('my_cindex_wanted: %s' % str(my_cindex_wanted))
                             cindex_wanted = comm.bcast(my_cindex_wanted, root=root)
-                            if False:
-                                print('cgetitem (slow)... [should use cgetitem_index_arr]')
-                                glob_thisChi_neighbors = [
-                                    thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]]) 
-                                    for i in range(cindex_wanted.shape[0]) ]
-                                print('cgetitem (slow) done')
-                            else:
-                                print('cgetitem (fast)... ')
-                                glob_thisChi_neighbors = cgetitem_index_arr(thisChi, cindex_wanted) 
-                                print('cgetitem (fast) done')
+                            glob_thisChi_neighbors = cgetitem_index_arr(thisChi, cindex_wanted) 
+
+                            # slower version doing the same
+                            # glob_thisChi_neighbors = [
+                            #     thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]]) 
+                            #     for i in range(cindex_wanted.shape[0]) ]
 
 
                             if comm.rank == root:
@@ -623,7 +577,7 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                     have_empty_cells = (Nfill > 0)
                     comm.barrier()
 
-                raise Exception('dbg attempt 2')
+
 
             elif fill_empty_chi_cells == 'AvgAndRandNeighb':
                 raise Exception('Not implemented any more')
