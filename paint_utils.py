@@ -21,6 +21,7 @@ from Grid import RealGrid, ComplexGrid
 from nbkit03_utils import get_cstat
 from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
+from pmesh.pm import RealField, ComplexField
 
 
 def read_ms_hdf5_catalog(fname, root='Subsample/'):
@@ -493,27 +494,120 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                     # ww = np.where(np.isnan(thisChi))
                     # have_empty_cells = (ww[0].shape[0] > 0)
                    
-                    # New parallel code.
-                    # Want field at positions [(ww+r)%Ng] dx.
-                    # Result depends on number of cores, not sure how to fix, leave for later.
-                    BoxSize = cat.attrs['BoxSize']
-                    dx = BoxSize/(float(Ng))
-                    #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
-                    # more carefully:
-                    pos_wanted = np.zeros((ww[0].shape[0],3))+np.nan
-                    for idir in [0,1,2]:
-                        pos_wanted[:,idir] = ( (np.array(ww[idir]) + r[:,idir]) % Ng ) * dx[idir] # ranges from 0 to BoxSize
-                    # readout
-                    readout_window = 'nnb'
-                    layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
-                    # interpolate field to particle positions (use pmesh 'readout' function)
-                    thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
-                    thisChi[ww] = thisChi_neighbors
+                    if False:
+                        # New parallel code, attempt 1.
+                        # Use readout to get field at positions [(ww+r)%Ng] dx.
+                        # Result depends on number of cores, not sure how to fix, leave for later.
+                        BoxSize = cat.attrs['BoxSize']
+                        dx = BoxSize/(float(Ng))
+                        #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
+                        # more carefully:
+                        pos_wanted = np.zeros((ww[0].shape[0],3))+np.nan
+                        for idir in [0,1,2]:
+                            # TODOOO: what index corresponds to what position? 
+                            pos_wanted[:,idir] = ( (np.array(ww[idir]) + r[:,idir]) % Ng ) * dx[idir] - 0*BoxSize[idir]/2.0 # ranges from 0..BoxSize
+
+                        # use readout to get neighbors
+                        readout_window = 'nnb'
+                        layout = thisChi.pm.decompose(pos_wanted, smoothing=readout_window)
+                        # interpolate field to particle positions (use pmesh 'readout' function)
+                        thisChi_neighbors = thisChi.readout(pos_wanted, resampler=readout_window, layout=layout)
+                        # POSSIBLE BUG: not sure if indexing of thisChi is consistent with pos_wanted offset and units, i.e.
+                        # might be reading out field from wrong locations...
+                        # YES: rank 1 has slab offset, so small indices should not start at x=0 but x=x_offset.
+                        if True:
+                            # print dbg info (rank 0 ok, rank 1 fails)
+                            for ii in range(10000,10004):
+                                if comm.rank == 1:
+                                    logger.info('ww: %s' % str([ww[0][ii], ww[1][ii], ww[2][ii]]))
+                                    logger.info('chi[ww]: %g' % thisChi[ww[0][ii], ww[1][ii], ww[2][ii]])
+                                    logger.info('chi manual neighbor: %g' %  
+                                        thisChi[(ww[0][ii]+r[ii,0])%Ng, (ww[1][ii]+r[ii,1])%Ng, (ww[2][ii]+r[ii,2])%Ng])
+                                    logger.info('chi readout neighbor: %g' % thisChi_neighbors[ii])
+
+
+                        thisChi[ww] = thisChi_neighbors
+                        #print('neighbors:', thisChi_neighbors)
+                        raise Exception('dbg me')
+
+                    if True:
+                        # New parallel code, attempt 2.
+                        # Use collective getitem.
+                        # http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.Field.cgetitem.
+                        
+                        # Note ww are indices of local slab, need to convert to global indices.
+                        def ltoc(field, index):
+                            """Convert local to collective index, inverting pm.pmesh.Field._ctol."""
+                            assert isinstance(field, RealField)
+                            return tuple(list(index + field.start))
+
+                        def ltoc_index_arr(field, index_arr):
+                            assert isinstance(field, RealField)
+                            assert type(index_arr)==np.ndarray
+                            assert np.all(index_arr>=0)
+                            return index_arr + field.start
+
+                        def cgetitem_index_arr(field, index_arr):
+                            assert isinstance(field, RealField)
+                            assert type(index_arr)==np.ndarray
+                            assert np.all(index_arr>=0)
+                            raise Exception('not implemented yet')
+
+
+                        # negative indexing
+                        # index1[index1 < 0] += self.Nmesh[index1 < 0]
+                        # if all(index1 >= self.start) and all(index1 < self.start + self.shape):
+                        #     return value, tuple(list(index1 - self.start) + list(index[self.ndim:]))
+
+                        thisChi_neighbors = None
+                        my_cindex_wanted = None
+                        for root in range(comm.size):
+                            # bcast to all ranks b/c must call cgetitem collectively with same args on each rank
+                            if comm.rank == root:
+                                # convert local index to collective index using ltoc which gives 3 tuple
+                                assert len(ww) == 3
+                                wwarr = np.array(ww).transpose()
+                               
+                                #cww = np.array([ 
+                                #    ltoc(field=thisChi, index=[ww[0][i],ww[1][i],ww[2][i]]) 
+                                #    for i in range(ww[0].shape[0]) ])
+                                cww = ltoc_index_arr(field=thisChi, index_arr=wwarr)
+                                #logger.info('cww: %s' % str(cww))
+
+                                #my_cindex_wanted = [(cww[:,0]+r[:,0])%Ng, (cww[1][:]+r[:,1])%Ng, (cww[2][:]+r[:,2])%Ng]
+                                my_cindex_wanted = (cww+r) % Ng
+                                #logger.info('my_cindex_wanted: %s' % str(my_cindex_wanted))
+                            cindex_wanted = comm.bcast(my_cindex_wanted, root=root)
+                            print('cgetitem (slow)... [should use cgetitem_index_arr]')
+                            glob_thisChi_neighbors = [
+                                thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]]) 
+                                for i in range(cindex_wanted.shape[0]) ]
+                            print('cgetitem done')
+
+                            if comm.rank == root:
+                                thisChi_neighbors = np.array(glob_thisChi_neighbors)
+                            #thisChi_neighbors = thisChi.cgetitem([40,42,52])
+                        
+                        #print('thisChi_neighbors:', thisChi_neighbors)
+
+                        if False:
+                            # print dbg info (rank 0 ok, rank 1 fails)
+                            for ii in range(11000,11004):
+                                if comm.rank == 1:
+                                    logger.info('ww: %s' % str([ww[0][ii], ww[1][ii], ww[2][ii]]))
+                                    logger.info('chi[ww]: %g' % thisChi[ww[0][ii], ww[1][ii], ww[2][ii]])
+                                    logger.info('chi manual neighbor: %g' %  
+                                        thisChi[(ww[0][ii]+r[ii,0])%Ng, (ww[1][ii]+r[ii,1])%Ng, (ww[2][ii]+r[ii,2])%Ng])
+                                    logger.info('chi bcast neighbor: %g' % thisChi_neighbors[ii])
+                            raise Exception('just dbg')
+                        thisChi[ww] = thisChi_neighbors
+
                     ww = np.where(np.isnan(thisChi))
                     Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
                     have_empty_cells = (Nfill > 0)
                     comm.barrier()
 
+                raise Exception('dbg attempt 2')
 
             elif fill_empty_chi_cells == 'AvgAndRandNeighb':
                 raise Exception('Not implemented any more')
