@@ -386,8 +386,9 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
 
     fill_empty_chi_cells : string
         - None, 'SetZero': Set empty cells to 0.
-        - 'RandNeighb': Fill using value at random neighbor cells.
-        - 'RandNeighbReadout': Fill using value at random neighbor cells (same as RandNeighb but other implementation)
+        - 'RandNeighbReadout': Fill using value at random neighbor cells (fast, using readout).
+        - 'RandNeighb': Fill using value at random neighbor cells (same as RandNeighbReadout
+            but slower b/c of manual MPI communication).
         - 'AvgAndRandNeighb': Not implemented in parallel version.
     """
     from nbodykit import CurrentMPIComm
