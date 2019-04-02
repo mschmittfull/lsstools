@@ -48,6 +48,7 @@ def paint_cat_to_gridk(
         PaintGrid_config, gridx=None, gridk=None,
         column=None,
         drop_gridx_column=True, rescalefac=1.0, 
+        f_log_growth=None,
         skip_fft=False,
         Ngrid=None, boxsize=None,
         grid_ptcle2grid_deconvolution=None,
@@ -128,26 +129,28 @@ def paint_cat_to_gridk(
             outfield = mesh.to_real_field(normalize=normalize)
 
         elif paint_mode == 'momentum_divergence':
-            # Paint momentum divergence div((1+delta)v/(aH)).
+            # Paint momentum divergence div((1+delta)v/(faH)).
             # See https://nbodykit.readthedocs.io/en/latest/cookbook/painting.html#Painting-the-Line-of-sight-Momentum-Field. 
             assert PaintGrid_config['Painter']['velocity_column'] is not None
+            assert f_log_growth is not None
             theta_k = None
             for idir in [0,1,2]:
                 vi_label = 'tmp_V_%d' % idir
-                # this is the velocity / (a*H). units are Mpc/h
-                cat_nbk[vi_label] = cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                # this is the velocity / (f*a*H). units are Mpc/h
+                cat_nbk[vi_label] = (cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                    / f_log_growth )
                 to_mesh_kwargs.update(dict(position='Position', value=vi_label))
                 mesh = cat_nbk.to_mesh(Nmesh=Ngrid, **to_mesh_kwargs)
                 if comm.rank == 0:
                     logger.info("mesh type: %s" % str(type(mesh)))
                     logger.info("mesh attrs: %s" % str(mesh.attrs))
-                # this is (1+delta)v_i/(aH) (if normalize were False would get rho*v_i/(aH))
+                # this is (1+delta)v_i/(faH) (if normalize were False would get rho*v_i/(faH))
                 outfield = FieldMesh(mesh.to_real_field(normalize=True))
-                # get nabla_i[(1+delta)v_i/(aH)]
+                # get nabla_i[(1+delta)v_i/(faH)]
                 def grad_i_fcn(k3vec, val, myidir=idir):
                     return -1.0j * k3vec[myidir]*val
                 outfield = outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber')
-                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(aH)]
+                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(faH)]
                 if theta_k is None:
                     theta_k = FieldMesh(outfield.compute('complex'))
                 else:
@@ -162,13 +165,15 @@ def paint_cat_to_gridk(
             assert PaintGrid_config['Painter']['velocity_column'] is not None
             assert PaintGrid_config['Painter']['fill_empty_cells'] is not None
             assert PaintGrid_config['Painter']['randseed_for_fill_empty_cells'] is not None
+            assert f_log_growth is not None
 
             vi_labels = []
             for idir in [0,1,2]:
                 vi_label = 'tmp_V_%d' % idir
                 vi_labels.append(vi_label)
-                # this is the velocity / (a*H). units are Mpc/h
-                cat_nbk[vi_label] = cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                # this is the velocity / (f*a*H). units are Mpc/h
+                cat_nbk[vi_label] = (cat_nbk[PaintGrid_config['Painter']['velocity_column']][:,idir]
+                    / f_log_growth )
             
             # call extra function to do the painting, saving result in gridx.G[chi_cols]
             paint_chicat_to_gridx(
@@ -187,13 +192,13 @@ def paint_cat_to_gridk(
             # get divergence
             theta_k = None
             for idir, vi in enumerate(vi_labels):
-                # this is v_i/(aH)
+                # this is v_i/(faH)
                 outfield = FieldMesh(gridx.G[vi].compute(mode='real'))
-                # get nabla_i[(1+delta)v_i/(aH)]
+                # get nabla_i[(1+delta)v_i/(faH)]
                 def grad_i_fcn(k3vec, val, myidir=idir):
                     return -1.0j * k3vec[myidir]*val
                 outfield = outfield.apply(grad_i_fcn, mode='complex', kind='wavenumber')
-                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(aH)]
+                # sum up to get theta(k) = sum_i nabla_i[(1+delta)v_i/(faH)]
                 if theta_k is None:
                     theta_k = FieldMesh(outfield.compute('complex'))
                 else:
@@ -247,7 +252,7 @@ def paint_cat_to_gridk(
             else:
                 logger.info('painted rho (normalize=False)')
         elif paint_mode == 'momentum_divergence':
-            logger.info('painted div[(1+delta)v/(aH)]')
+            logger.info('painted div[(1+delta)v/(faH)]')
         else:
             logger.info('painted with paint_mode %s' % paint_mode)
         if hasattr(outfield, 'attrs'):
