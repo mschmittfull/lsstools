@@ -76,6 +76,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             'kmax': opts['kmax']}
 
         # nbodykit config
+        # TODO: Specify "Painter" dict in cat_opts so we don't need to copy by hand here
         config_dict = {
             'Nmesh': opts['Ngrid'],
             'output': os.path.join(paths['cache_path'], 'test_paint_baoshift'),
@@ -89,7 +90,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
                 'paint_mode': cat_opts.get('paint_mode', 'overdensity'),
                 'velocity_column': cat_opts.get('velocity_column', None),
                 'fill_empty_cells': cat_opts.get('fill_empty_cells', None),
-                'randseed_for_fill_empty_cells': cat_opts.get('randseed_for_fill_empty_cells', None)
+                'randseed_for_fill_empty_cells': cat_opts.get('randseed_for_fill_empty_cells', None),
+                'raise_exception_if_column_does_not_exist': cat_opts.get(
+                    'raise_exception_if_column_does_not_exist', True)
                 }
             }
 
