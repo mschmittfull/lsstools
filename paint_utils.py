@@ -83,7 +83,7 @@ def paint_cat_to_gridk(
         raise Exception("nbkit 0.3 wrapper not implemented for plugin %s" % str(
             PaintGrid_config['plugin']))
     implemented_painter_keys = ['plugin', 'normalize', 'setMean', 'paint_mode', 'velocity_column',
-        'fill_empty_cells', 'randseed_for_fill_empty_cells']
+        'fill_empty_cells', 'randseed_for_fill_empty_cells', 'raise_exception_if_too_many_empty_cells']
     for k in PaintGrid_config['Painter'].keys():
         if k not in implemented_painter_keys:
             raise Exception("config key %s not implemented in wrapper" % str(k))
@@ -182,6 +182,8 @@ def paint_cat_to_gridk(
                 weight_ptcles_by=PaintGrid_config['Painter'].get('weight_ptcles_by', None), 
                 fill_empty_chi_cells=PaintGrid_config['Painter']['fill_empty_cells'],
                 RandNeighbSeed=PaintGrid_config['Painter']['randseed_for_fill_empty_cells'],
+                raise_exception_if_too_many_empty_cells=PaintGrid_config['Painter'].get(
+                    'raise_exception_if_too_many_empty_cells', True),
                 gridx=gridx, gridk=gridk,
                 cache_path=cache_path, do_plot=False, Ngrid=Ngrid, kmax=kmax)
 
@@ -380,7 +382,8 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                           cache_path=None, do_plot=False,
                           Ngrid=None, fill_empty_chi_cells='RandNeighb',
                           RandNeighbSeed=1234,
-                          kmax=None):
+                          kmax=None, 
+                          raise_exception_if_too_many_empty_cells=True):
     """
     Helper function that reads in displacement field 'chi_col_{0,1,2}' from catalog
     and paints it to a regular grid. 
@@ -491,7 +494,10 @@ def paint_chicat_to_gridx(chi_cols=None, cat=None, gridx=None, gridk=None,
                         logger.info("Fill %d empty chi cells (%g percent) using random neighbors" % (
                             Nfill, Nfill/float(Ng)**3*100.))
                     if Nfill/float(Ng)**3 >= 0.999:
-                        raise Exception("Stop because too many empty chi cells")
+                        if raise_exception_if_too_many_empty_cells:
+                            raise Exception("Stop because too many empty chi cells")
+                        else:
+                            logger.warning("More than 99.9 percent of cells are empty")
                     # draw -1,0,+1 for each empty cell, in 3 directions
                     # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
                     rng = MPIRandomState(comm, seed=RandNeighbSeed+i_iter*100, size=ww[0].shape[0], chunksize=100000)
