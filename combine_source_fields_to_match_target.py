@@ -91,8 +91,8 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
                 'velocity_column': cat_opts.get('velocity_column', None),
                 'fill_empty_cells': cat_opts.get('fill_empty_cells', None),
                 'randseed_for_fill_empty_cells': cat_opts.get('randseed_for_fill_empty_cells', None),
-                'raise_exception_if_column_does_not_exist': cat_opts.get(
-                    'raise_exception_if_column_does_not_exist', True)
+                'raise_exception_if_too_many_empty_cells': cat_opts.get(
+                    'raise_exception_if_too_many_empty_cells', True)
                 }
             }
 
