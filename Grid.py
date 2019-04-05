@@ -1218,7 +1218,7 @@ class ComplexGrid(Grid):
                         # free memory
                         gridx.drop_column(dijcol)
                        
-        elif quadfield == 'shift':
+        elif quadfield in ['shift', 'PsiNablaDelta']:
             # Get shift = \vPsi\cdot\nabla\delta
             self.compute_helper_grid('ABSK')
             for idir in range(3):
