@@ -852,6 +852,8 @@ class ComplexGrid(Grid):
                         additional_props=None, just_return_window_fcn=False):
         """
         mode: 'Gaussian' or 'SharpK' or 'kstep'.
+
+        Result overwrites data in grid.G[column].
         """
         if just_return_window_fcn:
             # just return a fcn computing the smoothing kernel WR
@@ -888,72 +890,8 @@ class ComplexGrid(Grid):
             nbkit03_utils.apply_smoothing(self.G[column], mode=mode, R=R, kmax=kmax,
                 additional_props=additional_props),
             column_info=column_info)
+      
 
-        if kmax is not None:
-            # zero pad all k>kmax
-            def kmax_cutter(k3vec, val):
-                # k3vec = [k_x, k_y, k_z]
-                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                #absk = (sum(ki ** 2 for ki in k3vec))**0.5 # absk on the mesh
-                return np.where(absk<=kmax, val, np.zeros(val.shape, dtype=val.dtype))
-
-            # append column
-            # self.append_column(column,
-            #     self.G[column].apply(kmax_cutter, mode='complex', kind='wavenumber'),
-            #     column_info=column_info)
-            # directly modify column (add action)
-            self.append_column(column, self.G[column].apply(kmax_cutter, mode='complex', kind='wavenumber'),
-                column_info=column_info)
-
-        if mode=='Gaussian':
-            if R!=0.0:
-                def smoothing_fcn(k3vec, val):
-                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                    return np.exp(-(R*absk)**2/2.0)*val
-                #self.G[column] = self.G[column].apply(smoothing_fcn, kind='wavenumber', mode='complex')
-                self.append_column(column, self.G[column].apply(smoothing_fcn, kind='wavenumber', mode='complex'),
-                    column_info=column_info)
-                print_cstats(self.G[column].compute(mode='complex'), prefix='gridk after smoothing ', logger=self.logger)
-                
-        elif mode == 'InverseGaussian':
-            # divide by Gaussian smoothing kernel; set to 0 at high k
-            if R!=0.0:
-                def smoothing_fcn(k3vec, val):
-                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                    return np.where(R*absk<=5.0,
-                             np.exp(+(R*absk)**2/2.0)*val,
-                             0.0*val)
-                self.append_column(column, self.G[column].apply(smoothing_fcn, kind='wavenumber', mode='complex'),
-                    column_info=column_info)
-
-        elif mode == 'kstep':
-            assert type(additional_props)==dict
-            assert additional_props.has_key('step_kmin')
-            assert additional_props.has_key('step_kmax')
-            step_kmin = additional_props['step_kmin']
-            step_kmax = additional_props['step_kmax']
-            #self.compute_helper_grid('ABSK')
-
-            def kstep_cutter(k3vec, val):
-                # k3vec = [k_x, k_y, k_z]
-                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                return np.where(
-                    (absk>=step_kmin) & (absk<step_kmax),
-                    val, 
-                    np.zeros(val.shape, dtype=val.dtype))
-
-            self.append_column(column, self.G[column].apply(kstep_cutter, mode='complex', kind='wavenumber'),
-                column_info=column_info)
-
-
-            # self.append_column(column,
-            #                    np.where( (self.G['ABSK']>=step_kmin) & (self.G['ABSK']<step_kmax),
-            #                              self.G[column],
-            #                              0.0*self.G[column]),
-            #                              column_info=column_info)
-
-        else:
-            raise Exception("Invalid smoothing mode %s" % str(mode))
 
 
     def calc_all_power_spectra(self, columns=None, Pk_ptcle2grid_deconvolution=None,
