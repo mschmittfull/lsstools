@@ -244,35 +244,41 @@ def smoothen_cfield(in_pm_cfield, mode='Gaussian', R=0.0, kmax=None):
 
 
 def calc_quadratic_field(base_field_mesh=None,
-    #base_rfield=None, base_cfield=None,
                          quadfield=None,
                          smoothing_of_base_field=None,
                          return_in_k_space=False, verbose=False):
     """
-    TODO: This does pretty much the same as calc_quadratic_field in Grid class.
-    Should merge. Maybe Grid class should use code here which looks more succinct
-    b/c using only rfield and cfield and not any Grid class stuff.
+    Calculate quadratic field, essentially by squaring base_field_mesh
+    with filters applied before squaring. 
+
+    Parameters
+    ----------
+    base_field_mesh : MeshSource object, typically a FieldMesh object
+        Input field that will be squared
+
+    quadfield : string
+        Represents quadratic field to be calculated. Can be
+        - 'tidal_s2': Get s^2 = 3/2*s_ij*s_ij = 3/2*[d_ij d_ij - 1/3 delta^2] 
+                      = 3/2*d_ijd_ij - delta^2/2,
+                      where s_ij = (k_ik_j/k^2-delta_ij^K/3)basefield(\vk) and
+                      d_ij = k_ik_j/k^2*basefield(\vk).
+        - 'tidal_G2': Get G2[delta] = d_ij d_ij - delta^2. This is orthogonal to
+                      delta^2 at low k which can be useful; also see Assassi et al (2014).
+        - 'shift': Get shift=\vPsi\cdot\vnabla\basefield(\vx), where vPsi=-ik/k^2*basefield(k).
+        - 'growth': Get delta^2(\vx)
+        - 'F2': Get F2[delta] = 17/21 delta^2 + shift + 4/21 tidal_s2
+                              = delta^2 + shift + 2/7 tidal_G2
+
+    Returns
+    -------
+    Return the calculated Ngrid**3 array containing quadfield(\vk) or quadfield(\vx).
+    Return as pmesh.pm.Realfield or ComplexField.
+
     """
-
-    #if base_rfield is None and base_cfield is None:
-    #    raise Exception("Only one of base_rfield and base_cfield can be not None")
-
-    # if base_rfield is not None:
-    #     # go to k space
-    #     tmp_field = base_rfield.copy()
-    #     base_cfield = tmp_field.r2c()
-    #     del tmp_field
-
-
-
-    if verbose:
-        from nbodykit import CurrentMPIComm
-        comm = CurrentMPIComm.get()
-
     # apply smoothing
     if smoothing_of_base_field is not None:
         #base_cfield = smoothen_cfield(base_cfield, **smoothing_of_base_field)
-        raise Exception('todo: implement')
+        raise Exception('todo: implement using Grid class')
     
     # compute quadratic field
     if quadfield == 'growth':
