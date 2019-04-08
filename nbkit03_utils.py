@@ -243,60 +243,72 @@ def smoothen_cfield(in_pm_cfield, mode='Gaussian', R=0.0, kmax=None):
     return pm_cfield
 
 
-def calc_quadratic_field(base_rfield=None, base_cfield=None,
+def calc_quadratic_field(base_field_mesh=None,
+    #base_rfield=None, base_cfield=None,
                          quadfield=None,
                          smoothing_of_base_field=None,
                          return_in_k_space=False, verbose=False):
+    """
+    TODO: This does pretty much the same as calc_quadratic_field in Grid class.
+    Should merge. Maybe Grid class should use code here which looks more succinct
+    b/c using only rfield and cfield and not any Grid class stuff.
+    """
 
-    if base_rfield is None and base_cfield is None:
-        raise Exception("Only one of base_rfield and base_cfield can be not None")
+    #if base_rfield is None and base_cfield is None:
+    #    raise Exception("Only one of base_rfield and base_cfield can be not None")
 
-    if base_rfield is not None:
-        # go to k space
-        tmp_field = base_rfield.copy()
-        base_cfield = tmp_field.r2c()
-        del tmp_field
+    # if base_rfield is not None:
+    #     # go to k space
+    #     tmp_field = base_rfield.copy()
+    #     base_cfield = tmp_field.r2c()
+    #     del tmp_field
+
+
 
     if verbose:
         from nbodykit import CurrentMPIComm
         comm = CurrentMPIComm.get()
 
     # apply smoothing
-    base_cfield = smoothen_cfield(base_cfield, **smoothing_of_base_field)
+    if smoothing_of_base_field is not None:
+        #base_cfield = smoothen_cfield(base_cfield, **smoothing_of_base_field)
+        raise Exception('todo: implement')
     
     # compute quadratic field
     if quadfield == 'growth':
-        out_rfield = base_cfield.c2r()
-        out_rfield = out_rfield**2
+        out_rfield = base_field_mesh.compute(mode='real')**2
 
     elif quadfield == 'growth-mean':
-        out_rfield = base_cfield.c2r()
-        out_rfield = out_rfield**2
+        out_rfield = base_field_mesh.compute(mode='real')**2
         mymean = out_rfield.cmean()
         out_rfield -= mymean
 
     elif quadfield == 'cube-mean':
-        out_rfield = base_cfield.c2r()
-        out_rfield = out_rfield**3
+        out_rfield = base_field_mesh.compute(mode='real')**3
         mymean = out_rfield.cmean()
         out_rfield -= mymean
+
 
     elif quadfield == 'tidal_G2':
         # Get G2[delta] = d_ijd_ij - delta^2
 
         # Compute -delta^2(\vx)
-        out_rfield = -(base_cfield.copy().c2r())**2
+        out_rfield = -base_field_mesh.compute(mode='real')**2
 
         # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
         # d_ij = k_ik_j/k^2*basefield(\vk).
         for idir in range(3):
             for jdir in range(idir,3):
-                def my_transfer_function(k, v, idir=idir, jdir=jdir):
-                    k2 = sum(kk**2 for kk in k)
-                    return np.where(k2 == 0.0, 0*v, k[idir]*k[jdir]*v / (k2))
-                dij_k = base_cfield.copy().apply(my_transfer_function)
+                def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                    kk = sum(ki**2 for ki in k3vec) # k^2 on the mesh
+                    kk[kk == 0] = 1
+                    return k3vec[idir]*k3vec[jdir]*val / kk
+
+                dij_k = base_field_mesh.apply(
+                    my_transfer_function, mode='complex', kind='wavenumber')
                 del my_transfer_function
-                dij_x = dij_k.c2r()
+                # do fft and convert field_mesh to RealField object
+                dij_x = dij_k.compute(mode='real')
                 if verbose:
                     rfield_print_info(dij_x, comm, 'd_%d%d: '%(idir,jdir))
 
@@ -307,7 +319,81 @@ def calc_quadratic_field(base_rfield=None, base_cfield=None,
                 else:
                     fac = 2.0
                 out_rfield += fac * dij_x**2
-                del dij_x, dij_k               
+                del dij_x, dij_k
+
+
+    elif quadfield == 'tidal_s2':
+        # Get s^2 = 3/2*d_ijd_ij - delta^2/2
+        # Compute -delta^2(\vx)/2
+        out_rfield = -base_field_mesh.compute(mode='real')**2 / 2.0
+
+        # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
+        # d_ij = k_ik_j/k^2*basefield(\vk).
+        for idir in range(3):
+            for jdir in range(idir,3):
+                def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                    kk = sum(ki**2 for ki in k3vec) # k^2 on the mesh
+                    kk[kk == 0] = 1
+                    return k3vec[idir]*k3vec[jdir]*val / kk
+
+                dij_k = base_field_mesh.apply(
+                    my_transfer_function, mode='complex', kind='wavenumber')
+                del my_transfer_function
+                dij_x = dij_k.compute(mode='real')
+                if verbose:
+                    rfield_print_info(dij_x, comm, 'd_%d%d: '%(idir,jdir))
+
+                # Add \sum_{i,j=0..2} d_ij(\vx)d_ij(\vx) 
+                #   = [d_00^2+d_11^2+d_22^2 + 2*(d_01^2+d_02^2+d_12^2)]
+                if jdir == idir:
+                    fac = 1.0
+                else:
+                    fac = 2.0
+                out_rfield += fac * 1.5 * dij_x**2
+                del dij_x, dij_k
+
+    elif quadfield in ['shift', 'PsiNablaDelta']:
+        # Get shift = \vPsi\cdot\nabla\delta
+        for idir in range(3):
+            # compute Psi_i
+            def Psi_i_fcn(k3vec, val, idir=idir):
+                kk = sum(ki ** 2 for ki in k3vec) # k^2 on the mesh
+                kk[kk == 0] = 1
+                return -1.0j * k3vec[idir]*val/kk
+            Psi_i_x = base_field_mesh.apply(
+                Psi_i_fcn, mode='complex', kind='wavenumber').compute(mode='real')
+
+             # compute nabla_i delta
+            def grad_i_fcn(k3vec, val, idir=idir):
+                return -1.0j * k3vec[idir]*val
+            nabla_i_delta_x = base_field_mesh.apply(
+                grad_i_fcn, mode='complex', kind='wavenumber').compute(mode='real')
+
+            # multiply and add up in x space
+            if idir == 0:
+                out_rfield = Psi_i_x * nabla_i_delta_x
+            else:
+                out_rfield += Psi_i_x * nabla_i_delta_x
+
+    elif quadfield == 'F2':
+        # F2 = delta^2...
+        out_rfield = calc_quadratic_field(
+            quadfield='growth',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            return_in_k_space=False, verbose=verbose)
+        # ... - shift
+        out_rfield -= calc_quadratic_field(
+            quadfield='shift',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            return_in_k_space=False, verbose=verbose)
+        # ... + 2/7 tidal_G2
+        out_rfield += 2./7. * calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            return_in_k_space=False, verbose=verbose)
 
     else:
         raise Exception("quadfield %s not implemented" % str(quadfield))

@@ -20,6 +20,7 @@ from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
 from nbodykit import logging
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
+import nbkit03_utils
 from Pktuple import Pktuple
 
 """
@@ -1096,7 +1097,72 @@ class ComplexGrid(Grid):
     def calc_quadratic_field(self, basefield=None, quadfield=None, gridx=None,
                              return_in_k_space=True):
         """
-        Calculate quadratic field, essentially by squaring basefield. 
+        Calculate quadratic field. This is a wrapper of nbkit03_utils.calc_quadratic_field.
+        Returns FieldMesh object.
+
+        Assume basefield is already smoothed
+        """
+
+        if False:
+            # debug growth term vs old Grid code
+            # step1: FFT
+            new_step1 = self.G[basefield].compute(mode='real')
+            print_cstats(new_step1, prefix='new step1: ')
+            gridx.append_column(basefield, self.fft_k2x(basefield, drop_column=False))
+            # step2: square
+            new_step2 = new_step1**2
+            print_cstats(new_step2, prefix='new step2: ')
+            gridx.append_column('tmp_quadfield', gridx.G[basefield].apply(
+                lambda x3vec, val: val**2, mode='real', kind='relative'))
+            #raise Exception('dbg here')
+
+        if False:
+            # more debugging
+            # Compute pmesh.pm.ComplexField object
+            outfield = nbkit03_utils.calc_quadratic_field(
+                base_field_mesh=self.G[basefield],
+                #base_rfield=None, 
+                #base_cfield=self.G[basefield].compute(mode='complex'),
+                quadfield=quadfield, 
+                smoothing_of_base_field=None,
+                return_in_k_space=False, verbose=False)
+            print('test %s vs old code' % quadfield)
+            print_cstats(outfield, 'new code: ')
+            outfield2 = self.OLD_calc_quadratic_field(basefield=basefield,
+                quadfield=quadfield, gridx=gridx, return_in_k_space=False).compute(mode='real')
+            raise Exception('dbg here')
+
+        # Compute pmesh.pm.ComplexField object
+        outfield = nbkit03_utils.calc_quadratic_field(
+            base_field_mesh=self.G[basefield],
+            #base_rfield=None, 
+            #base_cfield=self.G[basefield].compute(mode='complex'),
+            quadfield=quadfield, 
+            smoothing_of_base_field=None,
+            return_in_k_space=return_in_k_space, verbose=False)
+
+        # Convert to FieldMesh
+        out_fieldmesh = FieldMesh(outfield)
+
+        if True:
+            # test agreement w/ old code
+            print('test %s vs old code' % quadfield)
+            outfield2 = self.OLD_calc_quadratic_field(basefield=basefield,
+                quadfield=quadfield, gridx=gridx, return_in_k_space=False).compute(mode='real')
+            assert np.allclose(outfield, outfield2)
+            print('TEST %s OK' % quadfield)
+
+
+        return out_fieldmesh
+
+
+    def OLD_calc_quadratic_field(self, basefield=None, quadfield=None, gridx=None,
+                             return_in_k_space=True):
+        """
+        Deprecated. Use calc_quadratic field instead.
+
+        Calculate quadratic field, essentially by squaring basefield with filters applied
+        before squaring. 
 
         Parameters
         ----------
@@ -1220,7 +1286,7 @@ class ComplexGrid(Grid):
                        
         elif quadfield in ['shift', 'PsiNablaDelta']:
             # Get shift = \vPsi\cdot\nabla\delta
-            self.compute_helper_grid('ABSK')
+            #self.compute_helper_grid('ABSK')
             for idir in range(3):
 
                 # compute Psi_i

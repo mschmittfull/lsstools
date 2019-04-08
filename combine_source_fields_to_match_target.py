@@ -72,7 +72,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             'gridx': gridx, 'gridk': gridk, 'cache_path': paths['cache_path'],
             'Ngrid': opts['Ngrid'], 'boxsize': opts['boxsize'],
             'grid_ptcle2grid_deconvolution': opts['grid_ptcle2grid_deconvolution'],
-            'f_log_growth': opts['f_log_growth'],
+            'f_log_growth': opts.get('f_log_growth', None),
             'kmax': opts['kmax']}
 
         # nbodykit config
