@@ -86,8 +86,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
             sqcol,
             gridk.calc_quadratic_field(
                 basefield='%s_smoothed'%field_to_smoothen_and_square,
-                quadfield=source,
-                gridx=gridx))
+                quadfield=source))
         
     # don't need smoothed density any more
     if gridk.has_column('%s_smoothed'%field_to_smoothen_and_square):
@@ -111,8 +110,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
             sqcol,
             gridk.calc_quadratic_field(
                 basefield='%s_smoothed'%field_to_smoothen_and_square2,
-                quadfield=source,
-                gridx=gridx))
+                quadfield=source))
         
     # don't need smoothed density any more
     if gridk.has_column('%s_smoothed'%field_to_smoothen_and_square2):

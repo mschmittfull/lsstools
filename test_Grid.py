@@ -322,8 +322,7 @@ def main(argv):
         for quadfield in ['shift']:
             gridx.append_column(
                 quadfield,
-                gridk.calc_quadratic_field(basefield=cat_id, quadfield=quadfield,
-                    gridx=gridx, return_in_k_space=False))
+                gridk.calc_quadratic_field(basefield=cat_id, quadfield=quadfield))
             gridk.append_column(quadfield, gridx.fft_x2k(quadfield, drop_column=True))
             
     # test compute_orthogonalized_fields

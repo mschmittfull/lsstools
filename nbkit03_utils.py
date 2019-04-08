@@ -11,6 +11,7 @@ from __future__ import print_function,division
 from nbodykit.lab import *
 import numpy as np
 import os
+from copy import copy
 
 # MS code
 from cosmo_model import CosmoModel
@@ -243,10 +244,90 @@ def smoothen_cfield(in_pm_cfield, mode='Gaussian', R=0.0, kmax=None):
     return pm_cfield
 
 
+def apply_smoothing(mesh_source=None, mode='Gaussian', R=0.0, kmax=None,
+                    additional_props=None):
+    """
+    Apply smoothing to a mesh_source field.
+
+    Parameters
+    ----------
+    mode: string
+        'Gaussian' or 'SharpK' or 'kstep' or 'InverseGaussian'.
+
+    kmax : float
+        Additionally to smoothing, set field to 0 if k>kmax.
+
+    Returns
+    -------
+    New mesh_source object that contains the smoothed field.
+    """
+    if kmax is not None:
+        # zero pad all k>kmax
+        def kmax_cutter(k3vec, val):
+            # k3vec = [k_x, k_y, k_z]
+            absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+            #absk = (sum(ki ** 2 for ki in k3vec))**0.5 # absk on the mesh
+            return np.where(absk<=kmax, val, np.zeros(val.shape, dtype=val.dtype))
+
+        # append column
+        # self.append_column(column,
+        #     self.G[column].apply(kmax_cutter, mode='complex', kind='wavenumber'),
+        #     column_info=column_info)
+        # directly modify column (add action)
+        out = mesh_source.apply(kmax_cutter, mode='complex', kind='wavenumber')
+
+    if mode=='Gaussian':
+        if R!=0.0:
+            def smoothing_fcn(k3vec, val):
+                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                return np.exp(-(R*absk)**2/2.0)*val
+            #self.G[column] = self.G[column].apply(smoothing_fcn, kind='wavenumber', mode='complex')
+            out = mesh_source.apply(smoothing_fcn, kind='wavenumber', mode='complex')
+            #print_cstats(out.compute(mode='complex'), prefix='gridk after smoothing ', logger=self.logger)
+        else:
+            out = copy(mesh_source)
+            
+    elif mode == 'InverseGaussian':
+        # divide by Gaussian smoothing kernel; set to 0 at high k
+        if R!=0.0:
+            def smoothing_fcn(k3vec, val):
+                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                return np.where(R*absk<=5.0,
+                         np.exp(+(R*absk)**2/2.0)*val,
+                         0.0*val)
+            out = mesh_source.apply(smoothing_fcn, kind='wavenumber', mode='complex')
+        else:
+            out = copy(mesh_source)
+
+    elif mode == 'kstep':
+        assert type(additional_props)==dict
+        assert additional_props.has_key('step_kmin')
+        assert additional_props.has_key('step_kmax')
+        step_kmin = additional_props['step_kmin']
+        step_kmax = additional_props['step_kmax']
+        #self.compute_helper_grid('ABSK')
+
+        def kstep_cutter(k3vec, val):
+            # k3vec = [k_x, k_y, k_z]
+            absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+            return np.where(
+                (absk>=step_kmin) & (absk<step_kmax),
+                val, 
+                np.zeros(val.shape, dtype=val.dtype))
+
+        out = mesh_source.apply(kstep_cutter, mode='complex', kind='wavenumber')
+
+    else:
+        raise Exception('Invalid smoothing mode %s' % mode)
+
+    return out
+
+
 def calc_quadratic_field(base_field_mesh=None,
                          quadfield=None,
                          smoothing_of_base_field=None,
-                         return_in_k_space=False, verbose=False):
+                         #return_in_k_space=False, 
+                         verbose=False):
     """
     Calculate quadratic field, essentially by squaring base_field_mesh
     with filters applied before squaring. 
@@ -265,20 +346,19 @@ def calc_quadratic_field(base_field_mesh=None,
         - 'tidal_G2': Get G2[delta] = d_ij d_ij - delta^2. This is orthogonal to
                       delta^2 at low k which can be useful; also see Assassi et al (2014).
         - 'shift': Get shift=\vPsi\cdot\vnabla\basefield(\vx), where vPsi=-ik/k^2*basefield(k).
+        - 'PsiNablaDelta': Same as 'shift'
         - 'growth': Get delta^2(\vx)
         - 'F2': Get F2[delta] = 17/21 delta^2 + shift + 4/21 tidal_s2
                               = delta^2 + shift + 2/7 tidal_G2
 
     Returns
     -------
-    Return the calculated Ngrid**3 array containing quadfield(\vk) or quadfield(\vx).
-    Return as pmesh.pm.Realfield or ComplexField.
+    Return the calculated (Ngrid,Ngrid,Ngrid) field as a FieldMesh object.
 
     """
     # apply smoothing
     if smoothing_of_base_field is not None:
-        #base_cfield = smoothen_cfield(base_cfield, **smoothing_of_base_field)
-        raise Exception('todo: implement using Grid class')
+        base_field_mesh = apply_smoothing(mesh_source=base_field_mesh, **smoothing_of_base_field)
     
     # compute quadratic field
     if quadfield == 'growth':
@@ -387,28 +467,25 @@ def calc_quadratic_field(base_field_mesh=None,
             quadfield='growth',
             base_field_mesh=base_field_mesh,
             smoothing_of_base_field=smoothing_of_base_field,
-            return_in_k_space=False, verbose=verbose)
+            verbose=verbose).compute(mode='real')
         # ... - shift
         out_rfield -= calc_quadratic_field(
             quadfield='shift',
             base_field_mesh=base_field_mesh,
             smoothing_of_base_field=smoothing_of_base_field,
-            return_in_k_space=False, verbose=verbose)
+            verbose=verbose).compute(mode='real')
         # ... + 2/7 tidal_G2
         out_rfield += 2./7. * calc_quadratic_field(
             quadfield='tidal_G2',
             base_field_mesh=base_field_mesh,
             smoothing_of_base_field=smoothing_of_base_field,
-            return_in_k_space=False, verbose=verbose)
+            verbose=verbose).compute(mode='real')
 
     else:
         raise Exception("quadfield %s not implemented" % str(quadfield))
     
-    if return_in_k_space:
-        return out_rfield.r2c()
-    else:
-        return out_rfield
-    
+    return FieldMesh(out_rfield)
+
 
 def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_type=None,
                                          smoothing=None):
@@ -460,7 +537,7 @@ def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_
             # compute G2
             G2_cfield = calc_quadratic_field(
                 base_rfield=in_density_rfield, quadfield='tidal_G2',
-                smoothing_of_base_field=smoothing, return_in_k_space=True)
+                smoothing_of_base_field=smoothing).compute(mode='complex')
 
             # compute Psi_2ndorder = -3/14 ik/k^2 G2(k). checked sign: improves rcc with deltaNL
             # if we use -3/14, but get worse rcc when using +3/14.

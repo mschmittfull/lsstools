@@ -883,6 +883,12 @@ class ComplexGrid(Grid):
 
         column_info = self.column_infos[column]
         
+        self.append_column(
+            column,
+            nbkit03_utils.apply_smoothing(self.G[column], mode=mode, R=R, kmax=kmax,
+                additional_props=additional_props),
+            column_info=column_info)
+
         if kmax is not None:
             # zero pad all k>kmax
             def kmax_cutter(k3vec, val):
@@ -1094,25 +1100,27 @@ class ComplexGrid(Grid):
         return gridx.fft_x2k('tmp_kappa2', drop_column=True)
 
 
-    def calc_quadratic_field(self, basefield=None, quadfield=None, gridx=None,
-                             return_in_k_space=True):
+    def calc_quadratic_field(self, basefield=None, quadfield=None,
+        smoothing_of_base_field=None):
         """
         Calculate quadratic field. This is a wrapper of nbkit03_utils.calc_quadratic_field.
         Returns a FieldMesh object.
-
-        Assume basefield is already smoothed
         """
-        # Computes pmesh.pm.RealField or ComplexField object
-        outfield = nbkit03_utils.calc_quadratic_field(
-            base_field_mesh=self.G[basefield],
-            #base_rfield=None, 
-            #base_cfield=self.G[basefield].compute(mode='complex'),
-            quadfield=quadfield, 
-            smoothing_of_base_field=None,
-            return_in_k_space=return_in_k_space)
 
-        # Convert to FieldMesh
-        return FieldMesh(outfield)
+        if smoothing_of_base_field is not None:
+            # First apply smoothing, then square
+            assert not self.has_column('TMP_FIELD')
+            self.append_column('TMP_FIELD', self.G[basefield])
+            self.apply_smoothing('TMP_FIELD', **smoothing_of_base_field)
+            return nbkit03_utils.calc_quadratic_field(
+                base_field_mesh=self.G['TMP_FIELD'],
+                quadfield=quadfield)
+
+        else:
+            # no smoothing needed
+            return nbkit03_utils.calc_quadratic_field(
+                base_field_mesh=self.G[basefield],
+                quadfield=quadfield)
 
   
     def store_smoothed_gridx(self, col, path, fname,
