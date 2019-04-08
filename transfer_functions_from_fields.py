@@ -77,21 +77,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                               R=Rsmooth_for_quadratic_sources,
                               kmax=kmax)
 
-        if True:
-            # dbg new quadr field code
-            for quadfield in ['growth', 'tidal_s2', 'tidal_G2','shift','F2']:
-                gridk.calc_quadratic_field(
-                    basefield='%s_smoothed'%field_to_smoothen_and_square,
-                    quadfield=quadfield, return_in_k_space=False,
-                    gridx=gridx)
-
-            raise Exception('tesst ok')
-
-
     # compute quadratic sources
     for source in quadratic_sources:
-        if source not in ['growth','tidal_s2', 'tidal_G2', 'F2']:
-            raise Exception("Invalid quadratic source %s" % str(source))
         # compute delta^2 or tidal_s2 or tidal_G2
         sqcol = '%s_%s'%(field_to_smoothen_and_square,source)
         sqcols += [sqcol]
