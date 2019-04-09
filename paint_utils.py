@@ -662,8 +662,6 @@ def weighted_paint_cat_to_delta(
         particles in a cell with the same weight.
     Note: In nbodykit nomenclature this is called 'value' instead of 'weight', but only implements
         our 'sum' not 'avg' mode (it seems).
-
-    NOTE: Looks like this is only used in main_shift_catalog_by_Psi_grid.
     """
 
     if weighted_paint_mode not in ['sum','avg']:
