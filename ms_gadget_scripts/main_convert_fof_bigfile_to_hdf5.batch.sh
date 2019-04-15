@@ -12,8 +12,7 @@ source activate nbodykit-0.3.7-env
 
 myscript=main_convert_fof_bigfile_to_hdf5.py
 
-#for SimSeed in 400 401 402 403 404
-for SimSeed in 400
+for SimSeed in 400 401 402 403 404
 do
     python $myscript --SimSeed=$SimSeed --MinMass=$MinMass --MaxMass=$MaxMass --RSD=$RSD
 done
