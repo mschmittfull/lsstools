@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 set -x
-export MPICH_GNI_MBOXES_PER_BLOCK=4096
+export HDF5_USE_FILE_LOCKING=FALSE
 
 
 MinMass=10.8
