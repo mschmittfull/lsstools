@@ -1,16 +1,3 @@
-#!/usr/bin/env python
-#
-# Marcel Schmittfull 2017 (mschmittfull@gmail.com)
-#
-# Python script for comparing displacements for BAO reconstruction.
-#
-
-
-"""
-- Class for DM catalogs
-"""
-
-
 from __future__ import print_function,division
 
 import cPickle
