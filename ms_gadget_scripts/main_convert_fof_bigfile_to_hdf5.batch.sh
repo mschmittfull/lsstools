@@ -4,8 +4,8 @@ set -x
 export HDF5_USE_FILE_LOCKING=FALSE
 
 
-MinMass=10.8
-MaxMass=11.8
+MinMass=13.8
+MaxMass=15.1
 RSD=1
 
 source activate nbodykit-0.3.7-env
