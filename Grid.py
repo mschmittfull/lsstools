@@ -21,7 +21,7 @@ from pmesh.pm import RealField, ComplexField
 from nbodykit import logging
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
 import nbkit03_utils
-from Pktuple import Pktuple
+from MeasuredPower import MeasuredPower
 
 """
 Store a collection of nbdodykit MeshSource objects, e.g. RealField objects.
@@ -895,13 +895,26 @@ class ComplexGrid(Grid):
 
 
     def calc_all_power_spectra(self, columns=None, Pk_ptcle2grid_deconvolution=None,
-                               k_bin_width=1.0, Pkmeas=None, verbose=False):
+                               k_bin_width=1.0, Pkmeas=None, verbose=False,
+                               mode='1d', poles=None, Nmu=5, line_of_sight=None):
         """
         Calculate power spectra between columns. If columns=None, compute power spectra
         of all columns of the Grid object.
 
         k_bin_width : float
             Width of each k bin, in units of k_fundamental=2pi/L. Must be >=1.
+
+        mode : string
+            '1d' or '2d' (use for anisotropic power e.g. due to RSD)
+
+        poles : list
+            Multipoles to measure if mode='2d'. E.g. [0,2,4].
+
+        Nmu : int
+            If not None, measure also P(k,mu), in Nmu mu bins.
+
+        line_of_sight : list
+            Direction of line of sight if mode='2d', e.g. [0,0,1] for z direction.
         """
         from nbodykit.algorithms.fftpower import FFTPower
         if columns is None and (self.G is not None):
@@ -927,11 +940,23 @@ class ComplexGrid(Grid):
                     # Checked that measured power spectrum agrees with old code.
                     Pk_dk = 2.0*np.pi/self.boxsize * k_bin_width
                     Pk_kmin = 2.0*np.pi/self.boxsize / 2.0
-                    if id1==id2:
-                        Pkresult = FFTPower(first=self.G[id1], mode='1d', dk=Pk_dk, kmin=Pk_kmin)
+                    if mode == '1d':
+                        if id1==id2:
+                            Pkresult = FFTPower(first=self.G[id1], 
+                                mode=mode, dk=Pk_dk, kmin=Pk_kmin)
+                        else:
+                            Pkresult = FFTPower(first=self.G[id1], second=self.G[id2],
+                                mode=mode, dk=Pk_dk, kmin=Pk_kmin)
                     else:
-                        Pkresult = FFTPower(first=self.G[id1], second=self.G[id2],
-                            mode='1d', dk=Pk_dk, kmin=Pk_kmin)
+                        if id1==id2:
+                            Pkresult = FFTPower(first=self.G[id1], 
+                                mode=mode, dk=Pk_dk, kmin=Pk_kmin, 
+                                poles=poles, Nmu=Nmu, line_of_sight=line_of_sight)
+                        else:
+                            Pkresult = FFTPower(first=self.G[id1], second=self.G[id2],
+                                mode=mode, dk=Pk_dk, kmin=Pk_kmin,
+                                poles=poles, Nmu=Nmu, line_of_sight=line_of_sight)
+
 
                     # print info
                     if verbose:
@@ -949,9 +974,12 @@ class ComplexGrid(Grid):
 
                     # save result
                     # kest, Pest, num_summands, info, info_id1, info_id2
-                    Pkmeas[(id1,id2)] = Pktuple(
-                        Pkresult.power['k'], Pkresult.power['power'].real, Pkresult.power['modes'].real,
-                        info, self.column_infos[id1], self.column_infos[id2])
+                    #Pkmeas[(id1,id2)] = MeasuredPower(
+                    #    Pkresult.power['k'], Pkresult.power['power'].real, Pkresult.power['modes'].real,
+                    #   info, self.column_infos[id1], self.column_infos[id2])
+                    Pkmeas[(id1,id2)] = MeasuredPower(nbk_binned_stat=Pkresult,
+                        info=info, info_id1=self.column_infos[id1], info_id2=self.column_infos[id2])
+                    
         return Pkmeas
 
         
@@ -1156,13 +1184,13 @@ class ComplexGrid(Grid):
                 k_bin_width=k_bin_width,
                 Pkmeas=Pkmeas)
             Nfields = len(all_fields)
-            kvec = Pkmeas[Pkmeas.keys()[0]][0]
+            kvec = Pkmeas[Pkmeas.keys()[0]].k
             Nk = kvec.shape[0]
             print("Nfields: %d, Nk: %d" % (Nfields,Nk))
             Smat = np.zeros( (Nfields,Nfields,Nk) ) + np.nan
             for ifield, field in enumerate(all_fields):
                 for ifield2, field2 in enumerate(all_fields):
-                    Smat[ifield,ifield2,:] = Pkmeas[field,field2][1]
+                    Smat[ifield,ifield2,:] = Pkmeas[field,field2].P
             # enforce exact symmetry
             for ifield in range(Nfields):
                 for ifield2 in range(ifield+1,Nfields):

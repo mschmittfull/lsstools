@@ -46,7 +46,7 @@ def construct_matrices_needed_to_get_min_sqerror_trf_fcns(
     target : string, representing id of target field.
     Pk : Measured power spectra between all fields.
     """
-    kvec = Pk[(target,target)][0]
+    kvec = Pk[(target,target)].k
     Nk = kvec.shape[0]
     assert type(sources) == list
     Nsources = len(sources)
@@ -56,9 +56,9 @@ def construct_matrices_needed_to_get_min_sqerror_trf_fcns(
     sources_rms = np.zeros((Nsources,Nk)) + np.nan
     for isource, source in enumerate(sources):
         # <s_i,f>
-        sources_X_target[isource,:] = Pk[(source,target)][1]
+        sources_X_target[isource,:] = Pk[(source,target)].P
         # sqrt(<s_i^2>)
-        sources_rms[isource,:] = np.sqrt(Pk[(source,source)][1])
+        sources_rms[isource,:] = np.sqrt(Pk[(source,source)].P)
 
     # <s_is_j>/sqrt{<s_i^2><s_j^2>}
     sources_correl = np.zeros((Nsources,Nsources,Nk)) + np.nan
@@ -70,9 +70,9 @@ def construct_matrices_needed_to_get_min_sqerror_trf_fcns(
             else:
                 # off-diagonal correl
                 sources_correl[isource,isource2,:] = np.where( 
-                    Pk[(source,source2)][1] == 0.,
-                    np.zeros(Pk[(source,source2)][1].shape),
-                    Pk[(source,source2)][1] / (sources_rms[isource,:]*sources_rms[isource2,:]) )
+                    Pk[(source,source2)].P == 0.,
+                    np.zeros(Pk[(source,source2)].P.shape),
+                    Pk[(source,source2)].P / (sources_rms[isource,:]*sources_rms[isource2,:]) )
 
     # enforce exact symmetry of correl mat
     for isource in range(Nsources):

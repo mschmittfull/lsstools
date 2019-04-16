@@ -713,7 +713,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         }
 
     # eval orth trf fcns at kvec
-    kvec = Pkmeas[Pkmeas.keys()[0]][0]
+    kvec = Pkmeas[Pkmeas.keys()[0]].k
     Nk = kvec.shape[0]
     Tk_osources = np.zeros( (Nsources, Nk) )
     for isource in range(Nsources):
