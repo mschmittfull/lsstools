@@ -487,17 +487,31 @@ def calc_quadratic_field(base_field_mesh=None,
     return FieldMesh(out_rfield)
 
 
-def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_type=None,
-                                         smoothing=None):
+def get_displacement_from_density_rfield(in_density_rfield, component=None, 
+    Psi_type=None, smoothing=None, RSD=False, RSD_line_of_sight=None,
+    RSD_f_log_growth=None):
     """
     Given density delta(x) in real space, compute Zeldovich displacemnt Psi_component(x)
     given by Psi_component(\vk) = k_component / k^2 * W(k) * delta(\vk),
     where W(k) is smoothing window.
 
     Follow http://rainwoodman.github.io/pmesh/intro.html.
+
+    Parameters
+    ----------
+    RSD : boolean
+        If True, include RSD by displacing by \vecPsi(q)+f (\e_LOS.\vecPsi(q)) \e_LOS, 
+        where \ve_LOS is unit vector in line of sight direction.
+
+    RSD_line_of_sight : 3-tuple or 3-list
+        Line of sight direction, e.g. [0,0,1] for z axis.
     """
     assert (component in [0,1,2])
     assert Psi_type in ['Zeldovich','2LPT','-2LPT']
+
+    from nbodykit import CurrentMPIComm
+    comm = CurrentMPIComm.get()
+
 
     # copy so we don't do any in-place changes by accident
     density_rfield = in_density_rfield.copy()
@@ -510,8 +524,7 @@ def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_
         def potential_transfer_function(k, v):
             k2 = sum(ki**2 for ki in k)
             return np.where(k2 == 0.0, 0*v, v / (k2))
-            #return v / k2
-            #return k[0]
+
 
         # get potential pot = delta/k^2
         pot_k = density_rfield.r2c().apply(potential_transfer_function)
@@ -525,8 +538,9 @@ def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_
 
         # get zeldovich displacement
         def force_transfer_function(k, v, d=component):
-            # MS: not sure if we want a factor of -1 here
+            # MS: not sure if we want a factor of -1 here.
             return k[d] * 1j * v
+
         Psi_component_rfield = pot_k.apply(force_transfer_function).c2r()
 
         
@@ -551,6 +565,26 @@ def get_displacement_from_density_rfield(in_density_rfield, component=None, Psi_
             # add 2nd order to Zeldoivhc displacement
             Psi_component_rfield += Psi_2ndorder_rfield
             
+
+        if RSD:
+
+            # Add RSD displacement f (\e_LOS.\vecPsi(q)) \e_LOS.
+            
+            assert RSD_f_log_growth is not None
+            if RSD_line_of_sight in [[0,0,1],[0,1,0],[1,0,0]]:
+                # If [0,0,1] simply shift by Psi_z along z axis. Similarly in the other cases.
+                if RSD_line_of_sight[component] == 0:
+                    # nothing to do in this direction
+                    pass
+                elif RSD_line_of_sight[component] == 1:
+                    # add f Psi_component(q)
+                    Psi_component_rfield += RSD_f_log_growth * Psi_component_rfield
+                    if comm.rank == 0:
+                        print('%d: Added RSD in direction %d' % (comm.rank,component))
+            else:
+                # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
+                raise Exception('RSD_line_of_sight %s not implemented' % str(RSD_line_of_sight))
+
         
     return Psi_component_rfield
 
