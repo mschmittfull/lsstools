@@ -1,6 +1,6 @@
 from __future__ import print_function,division
 from collections import namedtuple
-
+import numpy as np
 
 class MeasuredPower(object):
 	"""
@@ -78,6 +78,9 @@ class MeasuredPower2D(MeasuredPower):
 	Can always access original nbk_binned_stat, e.g.through Pk.bstat.power.k 
 	and Pk.bstat.power.power.real.
 
+	Note: Do not modify any attributes by hand because will lead to 
+	inconsistent k2d, k, Pk.bstat.power.k etc.
+
 	For multipoles, use Pk.bstat.poles.k and Pk.bstat.poles.power_0, 
 	Pk.bstat.poles.power_2, etc.
 
@@ -94,11 +97,32 @@ class MeasuredPower2D(MeasuredPower):
 		super(MeasuredPower2D, self).__init__(info, info_id1, info_id2)
 		self.bstat = nbk_binned_stat
 
-		assert len(self.bstat.power.shape) == 2
-		# 2d power P(k,mu). To use all 1d code, store the 2d power as reshaped 1d arrays.
-		raise Exception('reshape 2d to 1d')
-		# store Nk and Nmu
-		#self.k = np.reshape(self.bstat.power[:,:], (Nk*Nmu,))
+		print(self.bstat.power)
+		print(self.bstat.power.shape)
+
+
+		# Check that we really got 2d power P(k,mu).
+		assert self.bstat.power.dims == ['k','mu']
+ 		assert len(self.bstat.power.shape) == 2
+
+		self.Nk = self.bstat.power.shape[0]
+		self.Nmu = self.bstat.power.shape[1]
+
+		# store 2d arrays, with shape (Nk, Nmu)
+		self.k2d = self.bstat.power['k']
+		self.mu2d = self.bstat.power['mu']
+		self.P2d = self.bstat.power['power'].real
+		self.Nmodes2d = self.bstat.power['modes'].real
+
+		for a in [self.k2d, self.mu2d, self.P2d]:
+			assert a.shape == (self.Nk,self.Nmu)
+
+		# To use 1d code, store flattened arrays
+		self.k = self.k2d.flatten()
+		self.mu = self.mu2d.flatten()
+		self.P = self.P2d.flatten()
+		self.Nmodes = self.Nmodes2d.flatten()
+
 
 
 

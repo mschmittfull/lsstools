@@ -169,7 +169,9 @@ def main():
                 opts['RSD_line_of_sight'][2])
 
 
-    out_dataset_name = 'FOFGroups'
+    #out_dataset_name = 'FOFGroups'
+    # Marcel's hdf5 files always assume data is stored in 'Subsample' dataset.
+    out_dataset_name = 'Subsample'
     #print("Output file:", ofile)
 
     if os.path.exists(out_hdf5_fname):
