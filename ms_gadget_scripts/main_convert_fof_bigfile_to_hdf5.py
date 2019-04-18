@@ -138,7 +138,8 @@ def main():
         out_array['Position'][np.where(out_array['Position']<mincoord)] = mincoord
         print("min, max pos after box wrap: %.15g, %.15g" % (np.min(out_array['Position']), np.max(out_array['Position'])))
         assert np.all(out_array['Position']>=mincoord)
-        assert np.all(out_array['Position']<1.0)
+        #assert np.all(out_array['Position']<1.0)
+        assert np.all(out_array['Position']<=1.0)
 
 
     # hdf5 attrs
