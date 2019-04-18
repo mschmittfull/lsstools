@@ -953,11 +953,11 @@ class ComplexGrid(Grid):
                         if id1==id2:
                             Pkresult = FFTPower(first=self.G[id1], 
                                 mode=mode, dk=Pk_dk, kmin=Pk_kmin, 
-                                poles=poles, Nmu=Nmu, line_of_sight=line_of_sight)
+                                poles=poles, Nmu=Nmu, los=line_of_sight)
                         else:
                             Pkresult = FFTPower(first=self.G[id1], second=self.G[id2],
                                 mode=mode, dk=Pk_dk, kmin=Pk_kmin,
-                                poles=poles, Nmu=Nmu, line_of_sight=line_of_sight)
+                                poles=poles, Nmu=Nmu, los=line_of_sight)
 
 
                     # print info

@@ -55,6 +55,10 @@ def paint_cat_to_gridk(
         kmax=None,
         cache_path=None
         ):
+    """
+    TODO: Should reimplement this at some point so it does not use the old
+    PaintGrid_config dict any more but only kwargs.
+    """
 
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
@@ -217,6 +221,7 @@ def paint_cat_to_gridk(
 
     elif PaintGrid_config['DataSource']['plugin'] == 'BigFileGrid':
         ## Read bigfile grid (mesh) directly, no painting required, e.g. for linear density.
+        # TODO: generalize this so we can read bigfile catalog, not only bigfile mesh file.
         if paint_mode not in [None, 'overdensity']:
             raise Exception('Can only paint overdensity when reading BigFileGrid')
 
