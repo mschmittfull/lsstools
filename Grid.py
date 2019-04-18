@@ -21,7 +21,7 @@ from pmesh.pm import RealField, ComplexField
 from nbodykit import logging
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
 import nbkit03_utils
-from MeasuredPower import MeasuredPower
+from MeasuredPower import MeasuredPower1D, MeasuredPower2D
 
 """
 Store a collection of nbdodykit MeshSource objects, e.g. RealField objects.
@@ -614,6 +614,8 @@ class RealGrid(Grid):
 
         fill_value_negative_mass : if not None, set mass ofparticles with negative to mass to this value.
         """
+        raise Exception('TODO: Own Catalog class not needed here, should implement without it.')
+
         import Catalog
         uniform_cat = Catalog.Catalog()
         uniform_cat.sim_Ngrid = None
@@ -977,8 +979,16 @@ class ComplexGrid(Grid):
                     #Pkmeas[(id1,id2)] = MeasuredPower(
                     #    Pkresult.power['k'], Pkresult.power['power'].real, Pkresult.power['modes'].real,
                     #   info, self.column_infos[id1], self.column_infos[id2])
-                    Pkmeas[(id1,id2)] = MeasuredPower(nbk_binned_stat=Pkresult,
-                        info=info, info_id1=self.column_infos[id1], info_id2=self.column_infos[id2])
+                    if mode == '1d':
+                        Pkmeas[(id1,id2)] = MeasuredPower1D(nbk_binned_stat=Pkresult,
+                            info=info, info_id1=self.column_infos[id1], info_id2=self.column_infos[id2])
+                    elif mode == '2d':
+                        Pkmeas[(id1,id2)] = MeasuredPower2D(nbk_binned_stat=Pkresult,
+                            info=info, info_id1=self.column_infos[id1], info_id2=self.column_infos[id2])
+                    else:
+                        raise Exception('Invalid mode %s' % mode)
+
+
                     
         return Pkmeas
 
@@ -1126,8 +1136,7 @@ class ComplexGrid(Grid):
         helper_gridx.drop_column(tmpcol)
 
 
-    # TODOO: continue below
-                
+
 
     def compute_orthogonalized_fields(self, 
                                       N_ortho_iter=None, orth_method=None,

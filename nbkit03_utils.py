@@ -503,7 +503,7 @@ def get_displacement_from_density_rfield(in_density_rfield, component=None,
         If True, include RSD by displacing by \vecPsi(q)+f (\e_LOS.\vecPsi(q)) \e_LOS, 
         where \ve_LOS is unit vector in line of sight direction.
 
-    RSD_line_of_sight : 3-tuple or 3-list
+    RSD_line_of_sight : array_like, (3,)
         Line of sight direction, e.g. [0,0,1] for z axis.
     """
     assert (component in [0,1,2])
