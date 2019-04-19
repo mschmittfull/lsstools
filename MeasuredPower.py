@@ -98,10 +98,8 @@ class MeasuredPower2D(MeasuredPower):
 		self.bstat = nbk_binned_stat
 
 		print('Store 2D power with attrs: ', self.bstat.power.attrs)
-
-		print(self.bstat.power)
-		print(self.bstat.power.shape)
-
+		print('dir(bstat): ', dir(self.bstat))
+		print('dir(bstat.power): ', dir(self.bstat.power))
 
 		# Check that we really got 2d power P(k,mu).
 		assert self.bstat.power.dims == ['k','mu']

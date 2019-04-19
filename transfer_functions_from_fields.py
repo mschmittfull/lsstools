@@ -214,6 +214,10 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     if target_spec is not None:
         # compute composite target field. 
         # check target_spec is ok
+
+        if Pk_1d_2d_mode != '1d':
+            raise Exception('target_spec only implemented for 1d power so far')
+
         if target_spec.minimization_objective not in [
                 '(T*target-T*sources)^2/(T*target)^2', '(target0+T*other_targets-T*sources)^2']:
             raise Exception("Invalid minimization_objective %s" % 
@@ -328,17 +332,22 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     Pkmeas=Pkmeas)
 
                 # get trf fcns
-                TMP_interp_tuple_osources = transfer_functions.highlevel_get_interp_filters_minimizing_sqerror(
-                    sources=TMP_osources, target=TMP_target_minus_fixed_sources, 
-                    Pk=Pkmeas,
-                    interp_kind=interp_kind, bounds_error=bounds_error,
-                    Pkinfo={'Ngrid': gridk.Ngrid, 'boxsize': gridk.boxsize,
-                            'k_bin_width': k_bin_width,
-                            'Pk_1d_2d_mode': Pk_1d_2d_mode, 'RSD_poles': RSD_poles,
-                            'RSD_Nmu': RSD_Nmu, 'RSD_los': RSD_los,
-                            'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution})
+                if Pk_1d_2d_mode == '1d':
+                    TMP_interp_tuple_osources = transfer_functions.highlevel_get_interp_filters_minimizing_sqerror(
+                        sources=TMP_osources, target=TMP_target_minus_fixed_sources, 
+                        Pk=Pkmeas,
+                        interp_kind=interp_kind, bounds_error=bounds_error,
+                        Pkinfo={'Ngrid': gridk.Ngrid, 'boxsize': gridk.boxsize,
+                                'k_bin_width': k_bin_width,
+                                'Pk_1d_2d_mode': Pk_1d_2d_mode, 'RSD_poles': RSD_poles,
+                                'RSD_Nmu': RSD_Nmu, 'RSD_los': RSD_los,
+                                'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution})
+                else:
+                    raise Exception('not implemented')
 
                 if target_spec.target_norm['type'] in ['alpha0=1','MatchPower','MatchPowerAndLowKLimit']:
+                    if Pk_1d_2d_mode != '1d':
+                        raise Exception('Not implemented')
                     # Start with alpha0=1, alpha1=T_0(k), alpha2=T_1(k), etc
                     my_interp_alpha_opt = (np.zeros( (N_target_contris,) )).tolist()
                     my_interp_alpha_opt[0] = (lambda myk: 0*myk+1.0)
@@ -421,19 +430,23 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                             tmp_normfac *= lowk_const
                             print("tmp_normfac:", tmp_normfac)
                             #raise Exception("bla")
-                                
-                        
-                        interp_tmp_normfac = interpolation_utils.interp1d_manual_k_binning(
-                            kvec, tmp_normfac,
-                            #kind='manual_Pk_k_bins',
-                            kind=interp_kind,
-                            fill_value=(tmp_normfac[0], tmp_normfac[-1]),
-                            bounds_error=False,
-                            Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
-                            Pk=Pkmeas)
-                        # multiply by tmp_normfac
-                        for itc in range(N_target_contris):
-                            interp_alpha_opt[itc] = (lambda myk: interp_tmp_normfac(myk) * my_interp_alpha_opt[itc](myk))
+                            
+
+                        if Pk_1d_2d_mode != '1d':
+                            raise Exception('Not implemented')
+                        else:                           
+                            interp_tmp_normfac = interpolation_utils.interp1d_manual_k_binning(
+                                kvec, tmp_normfac,
+                                #kind='manual_Pk_k_bins',
+                                kind=interp_kind,
+                                fill_value=(tmp_normfac[0], tmp_normfac[-1]),
+                                bounds_error=False,
+                                Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
+                                Pk=Pkmeas)
+                            # multiply by tmp_normfac
+                            for itc in range(N_target_contris):
+                                interp_alpha_opt[itc] = (
+                                    lambda myk: interp_tmp_normfac(myk) * my_interp_alpha_opt[itc](myk))
 
                 else:
                     raise Exception("Invalid target_norm %s" % str(target_spec.target_norm['type']))
@@ -526,16 +539,18 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 # Not sure if kind=nearest is best.
                 interp_alpha_opt = (np.zeros( (N_target_contris,) )).tolist()
                 for itc in range(N_target_contris):
-                    if False:
-                        # use nearest interp; used until 6 June 2018
-                        raise Exception("please use manual_Pk_k_bins interpolation")
-                        interp_alpha_opt[itc] = interp.interp1d(
-                            kvec, alpha_opt[itc,:],
-                            kind='nearest',
-                            fill_value=(alpha_opt[itc,0], alpha_opt[itc,-1]),
-                            bounds_error=False)
+                    #     # use nearest interp; used until 6 June 2018
+                    #     raise Exception("please use manual_Pk_k_bins interpolation")
+                    #     interp_alpha_opt[itc] = interp.interp1d(
+                    #         kvec, alpha_opt[itc,:],
+                    #         kind='nearest',
+                    #         fill_value=(alpha_opt[itc,0], alpha_opt[itc,-1]),
+                    #         bounds_error=False)
+
+                    if Pk_1d_2d_mode != '1d':
+                        raise Exception('Not implemented')
                     else:
-                        # use manual k binning interp which gives much better orthogonalization
+                        # use manual k binning interp which gives good orthogonalization
                         interp_alpha_opt[itc] = interpolation_utils.interp1d_manual_k_binning(
                             kvec, alpha_opt[itc,:],
                             #kind='manual_Pk_k_bins',
@@ -554,9 +569,15 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 print("Add target contri %s to target" % tc_itc)
                 #gridk.G[target_spec.save_bestfit_target_field] += (
                 #    (interp_alpha_opt[itc](gridk.G['ABSK'].data)) * gridk.G[tc_itc])
-                def mult_by_alpha(k3vec, val, itc=itc):
-                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                    return interp_alpha_opt[itc](absk) * val
+                if interp_kind == 'manual_Pk_k_bins':
+                    def mult_by_alpha(k3vec, val, itc=itc):
+                        absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                        return interp_alpha_opt[itc](absk) * val
+                elif interp_kind == 'manual_Pk_k_mu_bins':
+                    # use k, mu
+                    raise Exception('todo')
+                else:
+                    raise Exception('invalid interp_kind')
                 to_add = gridk.G[tc_itc].apply(
                     mult_by_alpha, mode='complex', kind='wavenumber')
                 gridk.G[target_spec.save_bestfit_target_field] = FieldMesh(
@@ -622,6 +643,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
             '(target0+T*other_targets-T*sources)^2','(T*target-T*sources)^2/(T*target)^2']):
         # get betas of sources by minimizing (target-sources)^2. dividing by target^2 doesn't change that.
         # get trf fcns of orthogonalized fields (and non_orth_linear_sources which are included in osources)
+        # Note: if 1d, interp_tuple_osources will be functions of k, otherwise of k, mu.
         interp_tuple_osources = transfer_functions.highlevel_get_interp_filters_minimizing_sqerror(
             sources=osources, target=target_minus_fixed_sources, 
             Pk=Pkmeas,
@@ -653,9 +675,14 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         for counter, s in enumerate(osources):
             #gridk.G[save_bestfit_field] += (
             #    interp_tuple_osources[counter](gridk.G['ABSK'].data) * gridk.G[s])
-            def multiply_me(k3vec, val, counter=counter):
-                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                return interp_tuple_osources[counter](absk) * val
+            if Pk_1d_2d_mode == '1d':
+                def multiply_me(k3vec, val, counter=counter):
+                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                    return interp_tuple_osources[counter](absk) * val
+            elif Pk_1d_2d_mode == '2d':
+                raise Exception('todo: implement as fcn of k, mu')
+            else:
+                raise Exception('Invalid Pk_1d_2d_mode %s' % Pk_1d_2d_mode)
             to_add = gridk.G[s].apply(
                 multiply_me, mode='complex', kind='wavenumber')
             gridk.G[save_bestfit_field] = FieldMesh(

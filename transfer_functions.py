@@ -221,7 +221,7 @@ def get_interp_filters_minimizing_sqerror(
                 k_bin_width=Pkinfo['k_bin_width'], Pk=Pk
                 )
         else:
-            print("TODO: better use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")
+            raise Exception("TODO: better use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")
             interp_t_list[isource] = interp.interp1d(
                 kvec, this_tk,
                 kind=interp_kind,

@@ -1296,7 +1296,7 @@ class ComplexGrid(Grid):
                                 Ngrid=self.Ngrid, L=self.boxsize, k_bin_width=k_bin_width,
                                 Pk=Pkmeas
                                 )
-                            
+
 
                 # Get new orthogonalized fields, q_i = sum_{j<=i} M_ij s_j.
                 # Do not rotate non_orth_linear_fields though.
@@ -1316,9 +1316,18 @@ class ComplexGrid(Grid):
                             # self.G[ofield] += (
                             #     interp_Mrotmat[ifield][jfield](self.G['ABSK'].data)
                             #     * self.G['%s^%d_%d' % (orth_prefix,iortho-1,jfield)] )
-                            def to_add_filter(k3vec, val):
-                                absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                                return interp_Mrotmat[ifield][jfield](absk) * val
+                            if interp_kind == 'manual_Pk_k_bins':
+                                def to_add_filter(k3vec, val):
+                                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                                    return interp_Mrotmat[ifield][jfield](absk) * val
+                            elif interp_kind == 'manual_Pk_k_mu_bins':
+                                def to_add_filter(k3vec, val):
+                                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                                    with numpy.errstate(invalid='ignore', divide='ignore'):
+                                        mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
+                                    return interp_Mrotmat[ifield][jfield](absk,mu) * val
+
+
                             to_add = self.G['%s^%d_%d' % (orth_prefix,iortho-1,jfield)].apply(
                                 to_add_filter, mode='complex', kind='wavenumber')
                             self.G[ofield] = FieldMesh(
