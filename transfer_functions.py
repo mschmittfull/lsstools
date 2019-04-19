@@ -2,6 +2,7 @@ from __future__ import print_function,division
 
 import numpy as np
 from scipy import interpolate as interp
+from lsstools.MeasuredPower import MeasuredPower1D, MeasuredPower2D
 
 # MS packages
 from lsstools import interpolation_utils
@@ -20,12 +21,25 @@ def highlevel_get_interp_filters_minimizing_sqerror(
     (kvec, sources_X_target, sources_rms, sources_correl) = construct_matrices_needed_to_get_min_sqerror_trf_fcns(
         sources=sources, target=target, Pk=Pk)
 
+    # check if we have 2d or 1d power spectra
+    Pktype = type(Pk[Pk.keys()[0]])
+    print('Pktype: ', Pktype)
+
+    if Pktype not in [MeasuredPower1D, MeasuredPower2D]:
+        raise Exception('Pk must be MeasuredPower1D or MeasuredPower2D. Got %s' % 
+            Pktype)
+
+    # make sure all power spectra have same type (1d or 2d)
+    for key in Pk.keys():
+        assert type(Pk[key]) == Pktype
+
+
     # actually compute the transfer functions
     interp_trf_fcn_tuple = get_interp_filters_minimizing_sqerror(
         kvec, sources_X_target=sources_X_target, sources_rms=sources_rms, 
         sources_correl=sources_correl,
         interp_kind=interp_kind, bounds_error=bounds_error,
-        Pkinfo=Pkinfo)
+        Pkinfo=Pkinfo, Pk=Pk)
 
     return interp_trf_fcn_tuple
 
@@ -39,7 +53,10 @@ def construct_matrices_needed_to_get_min_sqerror_trf_fcns(
     target : string, representing id of target field.
     Pk : Measured power spectra between all fields.
     """
+    # kvec is always a 1d vector, even when RSD are included (in that
+    # case it is a flattened version of the 2d k[ik,imu] array).
     kvec = Pk[(target,target)].k
+    # Nk is total number of k bins or k,mu bins.
     Nk = kvec.shape[0]
     assert type(sources) == list
     Nsources = len(sources)
@@ -157,7 +174,7 @@ def get_filters_minimizing_sqerror(
 
 def get_interp_filters_minimizing_sqerror(
         kvec=None, sources_X_target=None, sources_rms=None, sources_correl=None,
-        interp_kind=None, bounds_error=None, Pkinfo=None):
+        interp_kind=None, bounds_error=None, Pkinfo=None, Pk=None):
     """
     For arbitrary numbe of sources, compute transfer functions using
     get_interp_filters_minimizing_sqerror.
@@ -176,6 +193,7 @@ def get_interp_filters_minimizing_sqerror(
     print("get_interp_filters_minimizing_sqerror...")
     # check input
     Nsources = sources_X_target.shape[0]
+    # total number of k,mu bins
     Nk = kvec.shape[0]
     assert sources_X_target.shape == (Nsources,Nk)
     assert sources_rms.shape == (Nsources,Nk)
@@ -192,17 +210,18 @@ def get_interp_filters_minimizing_sqerror(
     # create interpolators
     for isource in range(Nsources):
         this_tk = filters_isource_ik[isource,:]
-        if interp_kind == 'manual_Pk_k_bins':
+
+        if interp_kind in ['manual_Pk_k_bins', 'manual_Pk_k_mu_bins']:
             interp_t_list[isource] = interpolation_utils.interp1d_manual_k_binning(
                 kvec, this_tk,
                 kind=interp_kind,
                 fill_value=(this_tk[0], this_tk[-1]),
                 bounds_error=bounds_error,
                 Ngrid=Pkinfo['Ngrid'], L=Pkinfo['boxsize'],
-                k_bin_width=Pkinfo['k_bin_width']
+                k_bin_width=Pkinfo['k_bin_width'], Pk=Pk
                 )
         else:
-            print("TODO: better use interp_kind=manual_Pk_k_bins")
+            print("TODO: better use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")
             interp_t_list[isource] = interp.interp1d(
                 kvec, this_tk,
                 kind=interp_kind,

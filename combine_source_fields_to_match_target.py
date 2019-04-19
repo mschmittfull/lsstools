@@ -37,6 +37,8 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
     only_exec_trf_specs_subset : None or list.
         None: Execute all trf specs.
         List: Execute only trf specs in the list
+
+    TODO: should only use kwargs, not opts dict...
     """
 
     
@@ -353,6 +355,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
 
         # Generate all sources and compute transfer functions at the field level.
         # Also compute best combination and store in gridk.G[trf_spec.save_bestfit_field].
+        # TODO: too many options, should refactor...
         trf_results_here = (
             transfer_functions_from_fields.generate_sources_and_get_interp_filters_minimizing_sqerror(
             gridx=gridx, gridk=gridk,
@@ -375,6 +378,8 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             bounds_error=False,
             Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'], 
             k_bin_width=opts['k_bin_width'],
+            Pk_1d_2d_mode=opts.get('Pk_1d_2d_mode','1d'), RSD_poles=opts.get('RSD_poles', None), 
+            RSD_Nmu=opts.get('RSD_Nmu', None), RSD_los=opts.get('RSD_los',None),
             kmax=opts['kmax']))
       
         # save all trf fcns in dict
@@ -409,6 +414,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             columns=cols_Pk,
             Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
             k_bin_width=opts['k_bin_width'],
+            mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
+            Nmu=opts.get('RSD_Nmu',None),
+            line_of_sight=opts.get('RSD_line_of_sight',None),
             Pkmeas=Pkmeas)
         print("cols_Pk:\n", cols_Pk)
         
@@ -427,6 +435,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             columns=[residual_key],
             Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
             k_bin_width=opts['k_bin_width'],
+            mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
+            Nmu=opts.get('RSD_Nmu',None),
+            line_of_sight=opts.get('RSD_line_of_sight',None),
             Pkmeas=Pkmeas)
 
 
@@ -474,6 +485,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
         columns=cols_Pk,
         Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
         k_bin_width=opts['k_bin_width'],
+        mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
+        Nmu=opts.get('RSD_Nmu',None),
+        line_of_sight=opts.get('RSD_line_of_sight',None),
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
 
@@ -509,6 +523,9 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
     #         columns=cols_Pk,
     #         Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
     #         k_bin_width=opts['k_bin_width'],
+    #        mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
+    #       Nmu=opts.get('RSD_Nmu',None),
+    #        line_of_sight=opts.get('RSD_line_of_sight',None),
     #         Pkmeas=Pkmeas)
     #     print("Pkmeas keys:", Pkmeas.keys())
    

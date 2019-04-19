@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 from __future__ import print_function,division
 
 import numpy as np
@@ -10,15 +7,29 @@ from scipy import interpolate as interp
 import numpy.core.numeric as NX
 import sys
 
+from lsstools.MeasuredPower import MeasuredPower1D, MeasuredPower2D
 
 def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None, bounds_error=False,
-                              Ngrid=None, L=None, k_bin_width=1.0, verbose=False):
+                              Ngrid=None, L=None, k_bin_width=1.0, verbose=False,
+                              Pk=None
+    ):
     """
     Interpolate following a fixed k binning scheme that's also used to measure power spectra
     in cy_power_estimator.pyx.
 
+    Parameters
+    ----------
+    kind : string
+        Use 'manual_Pk_k_bins' for 1d power, or 'manual_Pk_k_mu_bins' for 2d power.
+
     L : float
         boxsize in Mpc/h
+
+    kin, Pin: numpy.ndarray
+        These are interpolated
+
+    Pk : Dict containing MeasuredPower1D or MeasuredPower2D entries
+        Only used to read power spectrum measurement options, e.g. Nmu, los, etc.
     """
     # check args
     if (fill_value is None) and (not bounds_error):
@@ -110,6 +121,14 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
 
         return interpolator
 
+    elif kind == 'manual_Pk_k_mu_bins':
+        Pk0 = Pk[Pk.keys()[0]]
+        assert type(Pk0) == MeasuredPower2D
+        assert Pk0.bstat.power.attrs['mode'] == '2d'
+        los = Pk0.bstat.power.attrs['los']
+        Nmu = Pk0.Nmu
+        Nk = Pk0.Nk
+        raise Exception('todo: implement')
 
     else:
         raise Exception("invalid kind %s" % str(kind))

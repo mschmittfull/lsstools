@@ -97,6 +97,8 @@ class MeasuredPower2D(MeasuredPower):
 		super(MeasuredPower2D, self).__init__(info, info_id1, info_id2)
 		self.bstat = nbk_binned_stat
 
+		print('Store 2D power with attrs: ', self.bstat.power.attrs)
+
 		print(self.bstat.power)
 		print(self.bstat.power.shape)
 

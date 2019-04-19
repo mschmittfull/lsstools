@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-#
-# Marcel Schmittfull 2018 (mschmittfull@gmail.com)
-#
-
 from __future__ import print_function,division
 
 import cPickle
@@ -1139,13 +1134,16 @@ class ComplexGrid(Grid):
 
 
     def compute_orthogonalized_fields(self, 
-                                      N_ortho_iter=None, orth_method=None,
-                                      all_in_fields=None, 
-                                      orth_prefix='ORTH s', non_orth_prefix='NON_ORTH s',
-                                      Pkmeas=None,
-                                      Pk_ptcle2grid_deconvolution=None,
-                                      k_bin_width=1.0,
-                                      delete_original_fields=False):
+        N_ortho_iter=None, orth_method=None,
+        all_in_fields=None, 
+        orth_prefix='ORTH s', non_orth_prefix='NON_ORTH s',
+        Pkmeas=None,
+        Pk_ptcle2grid_deconvolution=None,
+        k_bin_width=1.0,        
+        Pk_1d_2d_mode='1d', RSD_poles=None, RSD_Nmu=None,
+        RSD_los=None,
+        interp_kind=None,
+        delete_original_fields=False):
         """
         Given all_fields, compute orthogonalized fields using orthogonalization method
         orth_method and N_ortho_iter orthogonalization iterations. Save them on self,
@@ -1191,6 +1189,8 @@ class ComplexGrid(Grid):
                 columns=all_fields,
                 Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                 k_bin_width=k_bin_width,
+                mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                line_of_sight=RSD_los,
                 Pkmeas=Pkmeas)
             Nfields = len(all_fields)
             kvec = Pkmeas[Pkmeas.keys()[0]].k
@@ -1289,10 +1289,13 @@ class ComplexGrid(Grid):
                             # use manual k binning interp: gives much better orthogonalization (10^-5 or better)
                             interp_Mrotmat[ifield][jfield] = interpolation_utils.interp1d_manual_k_binning(
                                 kvec, Mrotmat[ifield,jfield,:],
-                                kind='manual_Pk_k_bins',
+                                #kind='manual_Pk_k_bins',
+                                kind=interp_kind,
                                 fill_value=(Mrotmat[ifield,jfield,0], Mrotmat[ifield,jfield,-1]),
-                                bounds_error=False,
-                                Ngrid=self.Ngrid, L=self.boxsize, k_bin_width=k_bin_width)
+                                bounds_error=False, 
+                                Ngrid=self.Ngrid, L=self.boxsize, k_bin_width=k_bin_width,
+                                Pk=Pkmeas
+                                )
                             
 
                 # Get new orthogonalized fields, q_i = sum_{j<=i} M_ij s_j.

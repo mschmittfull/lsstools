@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-#
-# Marcel Schmittfull 2017 (mschmittfull@gmail.com)
-#
-# Python script for initial condition reconstruction transfer functions.
-
-
 from __future__ import print_function,division
 
 import numpy as np
@@ -36,7 +29,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     orth_method='CholeskyDecomp',
     interp_kind='linear', bounds_error=False,
     Pk_ptcle2grid_deconvolution=None, 
-    k_bin_width=1.0,
+    k_bin_width=1.0, 
+    Pk_1d_2d_mode='1d', RSD_poles=None, RSD_Nmu=None, RSD_los=None,
     kmax=None):
 
     """
@@ -52,8 +46,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     
     """
 
-    if interp_kind != 'manual_Pk_k_bins':
-        raise Exception("Please use interp_kind=manual_Pk_k_bins")
+    if interp_kind not in ['manual_Pk_k_bins', 'manual_Pk_k_mu_bins']:
+        raise Exception("Please use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")
     
     Pkmeas = None
 
@@ -206,6 +200,9 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         Pkmeas=Pkmeas, 
         Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
         k_bin_width=k_bin_width,
+        Pk_1d_2d_mode=Pk_1d_2d_mode, RSD_poles=RSD_poles, RSD_Nmu=RSD_Nmu,
+        RSD_los=RSD_los,
+        interp_kind=interp_kind,
         delete_original_fields=True)
 
     
@@ -252,6 +249,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     columns=tmp_cols,
                     Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                     k_bin_width=k_bin_width,
+                    mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                    line_of_sight=RSD_los,
                     Pkmeas=Pkmeas)
 
                     
@@ -324,6 +323,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     columns=[TMP_target_minus_fixed_sources]+TMP_osources,
                     Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                     k_bin_width=k_bin_width,
+                    mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                    line_of_sight=RSD_los,
                     Pkmeas=Pkmeas)
 
                 # get trf fcns
@@ -333,6 +334,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     interp_kind=interp_kind, bounds_error=bounds_error,
                     Pkinfo={'Ngrid': gridk.Ngrid, 'boxsize': gridk.boxsize,
                             'k_bin_width': k_bin_width,
+                            'Pk_1d_2d_mode': Pk_1d_2d_mode, 'RSD_poles': RSD_poles,
+                            'RSD_Nmu': RSD_Nmu, 'RSD_los': RSD_los,
                             'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution})
 
                 if target_spec.target_norm['type'] in ['alpha0=1','MatchPower','MatchPowerAndLowKLimit']:
@@ -378,6 +381,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                                 columns=['TMP_FIELD_FOR_NORM'],
                                 Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                                 k_bin_width=k_bin_width,
+                                mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                                line_of_sight=RSD_los,
                                 Pkmeas=None)
                             tmp_Ptarget = tmp_Pkmeas[('TMP_FIELD_FOR_NORM','TMP_FIELD_FOR_NORM')][1]
                             gridk.drop_column('TMP_FIELD_FOR_NORM')
@@ -388,6 +393,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                                 columns=orth_target_contris,
                                 Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                                 k_bin_width=k_bin_width,
+                                mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                                line_of_sight=RSD_los,
                                 Pkmeas=Pkmeas)
                             tmp_Ptarget = np.zeros(kvec.shape)
                             for itc, tc in enumerate(orth_target_contris):
@@ -418,10 +425,12 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                         
                         interp_tmp_normfac = interpolation_utils.interp1d_manual_k_binning(
                             kvec, tmp_normfac,
-                            kind='manual_Pk_k_bins',
+                            #kind='manual_Pk_k_bins',
+                            kind=interp_kind,
                             fill_value=(tmp_normfac[0], tmp_normfac[-1]),
                             bounds_error=False,
-                            Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width)
+                            Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
+                            Pk=Pkmeas)
                         # multiply by tmp_normfac
                         for itc in range(N_target_contris):
                             interp_alpha_opt[itc] = (lambda myk: interp_tmp_normfac(myk) * my_interp_alpha_opt[itc](myk))
@@ -448,6 +457,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     columns=osources + orth_target_contris + fixed_linear_sources,
                     Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
                     k_bin_width=k_bin_width,
+                    mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                    line_of_sight=RSD_los,
                     Pkmeas=Pkmeas)
                 
                 # Compute A matrix: A_ij = delta_ij - sum_\mu^Nsources r_{i\mu} r_{j\mu},
@@ -527,10 +538,12 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                         # use manual k binning interp which gives much better orthogonalization
                         interp_alpha_opt[itc] = interpolation_utils.interp1d_manual_k_binning(
                             kvec, alpha_opt[itc,:],
-                            kind='manual_Pk_k_bins',
+                            #kind='manual_Pk_k_bins',
+                            kind=interp_kind,
                             fill_value=(alpha_opt[itc,0], alpha_opt[itc,-1]),
                             bounds_error=False,
-                            Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width)
+                            Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
+                            Pk=Pkmeas)
 
             # get target field by summing up target contributions weighted by alpha_opt
             # copy column info from input
@@ -601,6 +614,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         columns=tmpcols,
         Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
         k_bin_width=k_bin_width,
+        mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+        line_of_sight=RSD_los,
         Pkmeas=Pkmeas)
 
     if (target_spec is None) or (target_spec.minimization_objective in [
@@ -613,6 +628,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
             interp_kind=interp_kind, bounds_error=bounds_error,
             Pkinfo={'Ngrid': gridk.Ngrid, 'boxsize': gridk.boxsize,
                     'k_bin_width': k_bin_width,
+                    'Pk_1d_2d_mode': Pk_1d_2d_mode, 'RSD_poles': 'RSD_poles',
+                    'RSD_Nmu': RSD_Nmu, 'RSD_los': RSD_los,
                     'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution})
 
     elif target_spec.minimization_objective == '(T*target-T*sources)^2/(T*model)^2':
