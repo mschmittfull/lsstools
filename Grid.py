@@ -1294,7 +1294,7 @@ class ComplexGrid(Grid):
                                 fill_value=(Mrotmat[ifield,jfield,0], Mrotmat[ifield,jfield,-1]),
                                 bounds_error=False, 
                                 Ngrid=self.Ngrid, L=self.boxsize, k_bin_width=k_bin_width,
-                                Pk=Pkmeas
+                                Pkref=Pkmeas[Pkmeas.keys()[0]]
                                 )
 
 
@@ -1323,8 +1323,9 @@ class ComplexGrid(Grid):
                             elif interp_kind == 'manual_Pk_k_mu_bins':
                                 def to_add_filter(k3vec, val):
                                     absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                                    with numpy.errstate(invalid='ignore', divide='ignore'):
-                                        mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
+                                    absk[absk==0] = 1
+                                    #with np.errstate(invalid='ignore', divide='ignore'):
+                                    mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
                                     return interp_Mrotmat[ifield][jfield](absk,mu) * val
 
 

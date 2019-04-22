@@ -39,7 +39,7 @@ def highlevel_get_interp_filters_minimizing_sqerror(
         kvec, sources_X_target=sources_X_target, sources_rms=sources_rms, 
         sources_correl=sources_correl,
         interp_kind=interp_kind, bounds_error=bounds_error,
-        Pkinfo=Pkinfo, Pk=Pk)
+        Pkinfo=Pkinfo, Pkref=Pk[Pk.keys()[0]])
 
     return interp_trf_fcn_tuple
 
@@ -174,7 +174,7 @@ def get_filters_minimizing_sqerror(
 
 def get_interp_filters_minimizing_sqerror(
         kvec=None, sources_X_target=None, sources_rms=None, sources_correl=None,
-        interp_kind=None, bounds_error=None, Pkinfo=None, Pk=None):
+        interp_kind=None, bounds_error=None, Pkinfo=None, Pkref=None):
     """
     For arbitrary numbe of sources, compute transfer functions using
     get_interp_filters_minimizing_sqerror.
@@ -218,7 +218,7 @@ def get_interp_filters_minimizing_sqerror(
                 fill_value=(this_tk[0], this_tk[-1]),
                 bounds_error=bounds_error,
                 Ngrid=Pkinfo['Ngrid'], L=Pkinfo['boxsize'],
-                k_bin_width=Pkinfo['k_bin_width'], Pk=Pk
+                k_bin_width=Pkinfo['k_bin_width'], Pkref=Pkref
                 )
         else:
             raise Exception("TODO: better use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")

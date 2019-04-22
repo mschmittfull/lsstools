@@ -442,7 +442,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                                 fill_value=(tmp_normfac[0], tmp_normfac[-1]),
                                 bounds_error=False,
                                 Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
-                                Pk=Pkmeas)
+                                Pkref=Pkmeas[Pkmeas.keys()[0]])
                             # multiply by tmp_normfac
                             for itc in range(N_target_contris):
                                 interp_alpha_opt[itc] = (
@@ -558,7 +558,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                             fill_value=(alpha_opt[itc,0], alpha_opt[itc,-1]),
                             bounds_error=False,
                             Ngrid=gridk.Ngrid, L=gridk.boxsize, k_bin_width=k_bin_width,
-                            Pk=Pkmeas)
+                            Pkref=Pkmeas[Pkmeas.keys()[0]])
 
             # get target field by summing up target contributions weighted by alpha_opt
             # copy column info from input
