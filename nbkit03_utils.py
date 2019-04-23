@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-#
-# Marcel Schmittfull 2018 (mschmittfull@gmail.com)
-#
-# Utilities to call nbodykit 0.3
-#
-
 from __future__ import print_function,division
 
 

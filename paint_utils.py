@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# Uses nbodykit 0.3.x
-
 from __future__ import print_function,division
 
 import cPickle
