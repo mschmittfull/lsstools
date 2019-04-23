@@ -1145,7 +1145,7 @@ class ComplexGrid(Grid):
         RSD_los=None,
         interp_kind=None,
         delete_original_fields=False,
-        test_orthogonality=True):
+        test_orthogonality=False):
         """
         Given all_fields, compute orthogonalized fields using orthogonalization method
         orth_method and N_ortho_iter orthogonalization iterations. Save them on self,
@@ -1390,10 +1390,11 @@ class ComplexGrid(Grid):
                     if i2>i1:
                         continue
                     rcc = Pktest[(c1,c2)].P/(Pktest[(c1,c1)].P*Pktest[(c2,c2)].P)**0.5
+                    Nmodes = Pktest[(c1,c2)].Nmodes
                     if i1!=i2:
-                        ww = np.where(np.abs(rcc)>1e-5)
+                        ww = np.where((np.abs(rcc)>1e-5) & (Nmodes>2))
                     else:
-                        ww = np.where(np.abs(rcc-1.)>1e-5)
+                        ww = np.where((np.abs(rcc-1.)>1e-5) & (Nmodes>2))
                     if ww[0].shape[0]>0:
                         print('Test: Bad rcc(%d,%d) after orth:' % (i1,i2))
                         print('allk:', Pktest[(c1,c2)].k)
@@ -1402,10 +1403,7 @@ class ComplexGrid(Grid):
                         print('mu: ', Pktest[(c1,c2)].mu[ww])
                         print('Nmodes: ', Pktest[(c1,c2)].Nmodes[ww])
                         print('rcc: ', rcc[ww])
-                    
-
-
-        raise Exception('test orth')
+                        raise Exception('orth test failed')
 
         return all_fields, Pkmeas, ortho_rot_matrix, orthogonalization_internals
 
