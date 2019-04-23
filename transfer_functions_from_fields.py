@@ -680,7 +680,11 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
                     return interp_tuple_osources[counter](absk) * val
             elif Pk_1d_2d_mode == '2d':
-                raise Exception('todo: implement as fcn of k, mu')
+                def multiply_me(k3vec, val, counter=counter):
+                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
+                    absk[absk==0] = 1
+                    mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
+                    return interp_tuple_osources[counter](absk,mu) * val
             else:
                 raise Exception('Invalid Pk_1d_2d_mode %s' % Pk_1d_2d_mode)
             to_add = gridk.G[s].apply(
@@ -759,20 +763,33 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     # eval orth trf fcns at kvec
     kvec = Pkmeas[Pkmeas.keys()[0]].k
     Nk = kvec.shape[0]
+    if Pk_1d_2d_mode == '2d':
+        muvec = Pkmeas[Pkmeas.keys()[0]].mu
+    else:
+        muvec = None
     Tk_osources = np.zeros( (Nsources, Nk) )
     for isource in range(Nsources):
-        Tk_osources[isource,:] = interp_tuple_osources[isource](kvec)
+        if Pk_1d_2d_mode == '1d':
+            Tk_osources[isource,:] = interp_tuple_osources[isource](kvec)
+        elif Pk_1d_2d_mode == '2d':
+            Tk_osources[isource,:] = interp_tuple_osources[isource](kvec, muvec)
+        else:
+            raise Exception('Invalid Pk_1d_2d_mode %s' % Pk_1d_2d_mode)
         
     trf_fcns_orth_fields = OrderedDict()
     trf_fcns_orth_fields[target] = OrderedDict()
     for osource, interp_otf in zip(osources,interp_tuple_osources):
-        trf_fcns_orth_fields[target][osource] = [kvec, interp_otf(kvec)]
+        if Pk_1d_2d_mode == '1d':
+            trf_fcns_orth_fields[target][osource] = [kvec, interp_otf(kvec)]
+        elif Pk_1d_2d_mode == '2d':
+            trf_fcns_orth_fields[target][osource] = [(kvec, muvec), interp_otf(kvec,muvec)]
 
     #print("kvec:", kvec.shape, kvec)
     #raise Exception("dbg kvec")
 
         
     trf_results['kvec'] = kvec
+    trf_results['muvec'] = muvec
     trf_results['Pkmeas'] = Pkmeas
     trf_results['trf_fcns_orth_fields'] = trf_fcns_orth_fields
     

@@ -231,12 +231,19 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
                     Pout = np.where( k_indices >= 0, Pout, np.zeros(Pout.shape)+fill_value[0] )
 
             # mu>=mumin
-            assert np.all(mu_indices>=0)
+            assert np.all(mu_indices[~np.isnan(muarg)]>=0)
             # mu<=mumax
-            assert np.all(mu_indices<Nmu)
+            if not np.all(mu_indices[~np.isnan(muarg)]<Nmu):
+                print("Found mu>1: ", muarg[mu_indices>Nmu-1])
+                raise Exception('Too large mu')
+
+            # handle nan input
+            Pout = np.where ( np.isnan(karg), np.zeros(Pout.shape)+np.nan, Pout )
+            Pout = np.where ( np.isnan(muarg), np.zeros(Pout.shape)+np.nan, Pout )
+
 
             return Pout
-            
+
 
         if False:
             # some quick tests of interpolator (interpolate Pkref instead of Pin above)

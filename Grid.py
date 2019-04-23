@@ -944,7 +944,8 @@ class ComplexGrid(Grid):
                         else:
                             Pkresult = FFTPower(first=self.G[id1], second=self.G[id2],
                                 mode=mode, dk=Pk_dk, kmin=Pk_kmin)
-                    else:
+                    elif mode == '2d':
+                        assert line_of_sight is not None
                         if id1==id2:
                             Pkresult = FFTPower(first=self.G[id1], 
                                 mode=mode, dk=Pk_dk, kmin=Pk_kmin, 
@@ -1324,7 +1325,6 @@ class ComplexGrid(Grid):
                                 def to_add_filter(k3vec, val):
                                     absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
                                     absk[absk==0] = 1
-                                    #with np.errstate(invalid='ignore', divide='ignore'):
                                     mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
                                     return interp_Mrotmat[ifield][jfield](absk,mu) * val
 

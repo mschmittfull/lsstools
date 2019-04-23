@@ -416,7 +416,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             k_bin_width=opts['k_bin_width'],
             mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
             Nmu=opts.get('RSD_Nmu',None),
-            line_of_sight=opts.get('RSD_line_of_sight',None),
+            line_of_sight=opts.get('RSD_los',None),
             Pkmeas=Pkmeas)
         print("cols_Pk:\n", cols_Pk)
         
@@ -437,7 +437,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
             k_bin_width=opts['k_bin_width'],
             mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
             Nmu=opts.get('RSD_Nmu',None),
-            line_of_sight=opts.get('RSD_line_of_sight',None),
+            line_of_sight=opts.get('RSD_los',None),
             Pkmeas=Pkmeas)
 
 
@@ -487,7 +487,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
         k_bin_width=opts['k_bin_width'],
         mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
         Nmu=opts.get('RSD_Nmu',None),
-        line_of_sight=opts.get('RSD_line_of_sight',None),
+        line_of_sight=opts.get('RSD_los',None),
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
 
@@ -525,7 +525,7 @@ def actually_calc_Pks(opts, paths, delete_cache=True,
     #         k_bin_width=opts['k_bin_width'],
     #        mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None), 
     #       Nmu=opts.get('RSD_Nmu',None),
-    #        line_of_sight=opts.get('RSD_line_of_sight',None),
+    #        line_of_sight=opts.get('RSD_los',None),
     #         Pkmeas=Pkmeas)
     #     print("Pkmeas keys:", Pkmeas.keys())
    
