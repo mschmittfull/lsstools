@@ -1144,7 +1144,8 @@ class ComplexGrid(Grid):
         Pk_1d_2d_mode='1d', RSD_poles=None, RSD_Nmu=None,
         RSD_los=None,
         interp_kind=None,
-        delete_original_fields=False):
+        delete_original_fields=False,
+        test_orthogonality=True):
         """
         Given all_fields, compute orthogonalized fields using orthogonalization method
         orth_method and N_ortho_iter orthogonalization iterations. Save them on self,
@@ -1323,9 +1324,10 @@ class ComplexGrid(Grid):
                                     return interp_Mrotmat[ifield][jfield](absk) * val
                             elif interp_kind == 'manual_Pk_k_mu_bins':
                                 def to_add_filter(k3vec, val):
-                                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                                    absk[absk==0] = 1
-                                    mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
+                                    absk = (sum(ki**2 for ki in k3vec))**0.5 # absk on the mesh
+                                    # Dont use absk[absk==0]=1 b/c interp does not allow k=1.
+                                    with np.errstate(invalid='ignore', divide='ignore'):
+                                        mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
                                     return interp_Mrotmat[ifield][jfield](absk,mu) * val
 
 
@@ -1374,6 +1376,36 @@ class ComplexGrid(Grid):
                     'Smat': Smat, 'inv_Lmat': inv_Lmat, 'Cmat': Cmat,
                     'Mrotmat': Mrotmat,
                     'inv_sqrt_Sii_vec': inv_sqrt_Sii_vec}
+
+        if test_orthogonality:
+            cols = [c for c in all_fields if c.startswith(orth_prefix)]
+            Pktest = self.calc_all_power_spectra(
+                columns=cols,
+                Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
+                k_bin_width=k_bin_width,
+                mode=Pk_1d_2d_mode, poles=RSD_poles, Nmu=RSD_Nmu,
+                line_of_sight=RSD_los)
+            for i1, c1 in enumerate(cols):
+                for i2, c2 in enumerate(cols):
+                    if i2>i1:
+                        continue
+                    rcc = Pktest[(c1,c2)].P/(Pktest[(c1,c1)].P*Pktest[(c2,c2)].P)**0.5
+                    if i1!=i2:
+                        ww = np.where(np.abs(rcc)>1e-5)
+                    else:
+                        ww = np.where(np.abs(rcc-1.)>1e-5)
+                    if ww[0].shape[0]>0:
+                        print('Test: Bad rcc(%d,%d) after orth:' % (i1,i2))
+                        print('allk:', Pktest[(c1,c2)].k)
+                        print('allmu:', Pktest[(c1,c2)].mu)
+                        print('k: ', Pktest[(c1,c2)].k[ww])
+                        print('mu: ', Pktest[(c1,c2)].mu[ww])
+                        print('Nmodes: ', Pktest[(c1,c2)].Nmodes[ww])
+                        print('rcc: ', rcc[ww])
+                    
+
+
+        raise Exception('test orth')
 
         return all_fields, Pkmeas, ortho_rot_matrix, orthogonalization_internals
 

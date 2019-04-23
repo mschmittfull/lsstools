@@ -173,19 +173,25 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
             k_indices = np.digitize(karg, kedges)
             mu_indices = np.digitize(np.abs(muarg), muedges)
 
-            # Have mu_indices[0]=0.0. Since bins are inclusive on left edge, will
-            # get mu_indices=1..Nmu+1. But we want 0..Nmu, so subtract 1
+            # nbodykit uses power[1:-1] at the end to drop stuff <edges[0]
+            # and >=edges[-1]. Similarly, digitize returns 0 if mu<edges[0] (never occurs)
+            # and Nmu if mu>=edges[-1]. Subtract one so we get we get mu_indices=0..Nmu,
+            # and assign mu=1 to mu_index=Nmu-1 
             mu_indices -= 1
-
-            # When mu==1, assign to last bin, ie. this is right-inclusive.
-            # Then we get mu_indices=0..Nmu-1 which is what we want.
-            # This is because nbodykit uses Nmu+2 bins and then uses power[1:-1] in the end. 
-
+            # When mu==1, assign to last bin, so it is right-inclusive.
+            mu_indices[np.isclose(np.abs(muarg),1.0)] = Nmu-1
             #mu_indices[mu_indices>Nmu-1] = Nmu-1
-            mu_indices[np.abs(muarg)==1] = Nmu-1
 
-            # Same applies to k
+            # Same applies to k: 
             k_indices -= 1
+
+            # mu>=mumin=0
+            assert np.all(mu_indices[~np.isnan(muarg)]>=0)
+            # mu<=mumax=1
+            if not np.all(mu_indices[~np.isnan(muarg)]<Nmu):
+                print("Found mu>1: ", muarg[mu_indices>Nmu-1])
+                raise Exception('Too large mu')
+
 
             # take lowest k bin when karg=0
             #k_indices[karg==0] = 0
@@ -193,6 +199,8 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
             ##print('k_indices:', k_indices)
             #print('mu_indices:', mu_indices)
 
+            #print('edges:', edges)
+            #raise Exception('tmp')
 
             # Want to get Pin at indices k_indices, mu_indices.
             # Problem: Pin is (Nk*Nmu,) array so need to convert 2d to 1d index.
@@ -202,11 +210,11 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
             # Also take modulo max_multi_index to avoid errror when k_indices or mu_indices out of bounds,
             # will handle those cases explicitly later.
             max_multi_index = (Nk-1)*Nmu+(Nmu-1)
-            multi_index = (k_indices*Nmu + mu_indices) % max_multi_index
-            print('multi_index:', multi_index)
+            multi_index = (k_indices*Nmu + mu_indices) % (max_multi_index+1)
+            #print('multi_index:', multi_index)
 
             if False:
-                # TEST: interp Pkref instead of Pin
+                # Just for testing: interp Pkref instead of Pin
                 Pout = Pkref.P[multi_index]
             else:
                 # interp Pin. Note this is wrong when k or mu are out of bounds
@@ -219,6 +227,7 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
             # k>kmax
             if not np.all(k_indices < Nk):
                 if bounds_error:
+                    print('too large k: ', karg[k_indices>=Nk])
                     raise Exception("Bounds error: k>kmax in interpolation, k=%s" % str(karg))
                 else:
                     Pout = np.where( k_indices < Nk, Pout, np.zeros(Pout.shape)+fill_value[1] )
@@ -226,16 +235,11 @@ def interp1d_manual_k_binning(kin, Pin, kind='manual_Pk_k_bins', fill_value=None
             # k<kmin
             if not np.all(k_indices >= 0):
                 if bounds_error:
+                    print('too small k: ', karg[k_indices<0])
                     raise Exception("Bounds error: k<kmin in interpolation, k=%s" % str(karg))
                 else:
                     Pout = np.where( k_indices >= 0, Pout, np.zeros(Pout.shape)+fill_value[0] )
 
-            # mu>=mumin
-            assert np.all(mu_indices[~np.isnan(muarg)]>=0)
-            # mu<=mumax
-            if not np.all(mu_indices[~np.isnan(muarg)]<Nmu):
-                print("Found mu>1: ", muarg[mu_indices>Nmu-1])
-                raise Exception('Too large mu')
 
             # handle nan input
             Pout = np.where ( np.isnan(karg), np.zeros(Pout.shape)+np.nan, Pout )

@@ -681,9 +681,10 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     return interp_tuple_osources[counter](absk) * val
             elif Pk_1d_2d_mode == '2d':
                 def multiply_me(k3vec, val, counter=counter):
-                    absk = np.sqrt(sum(ki ** 2 for ki in k3vec)) # absk on the mesh
-                    absk[absk==0] = 1
-                    mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
+                    absk = (sum(ki ** 2 for ki in k3vec))**0.5 # absk on the mesh
+                    # Dont use absk[absk==0]=1 b/c interp does not allow k=1.
+                    with np.errstate(invalid='ignore', divide='ignore'):
+                        mu = sum(k3vec[i]*RSD_los[i] for i in range(3)) / absk
                     return interp_tuple_osources[counter](absk,mu) * val
             else:
                 raise Exception('Invalid Pk_1d_2d_mode %s' % Pk_1d_2d_mode)
