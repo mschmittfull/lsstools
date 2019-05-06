@@ -7,6 +7,7 @@ from collections import OrderedDict
 from django.utils.text import get_valid_filename
 import re
 import numpy as np
+import sys
 
 # import tinydb
 try:
@@ -90,6 +91,11 @@ class PicklesDB(object):
                 if fname not in db_fnames:
                     # load the pickle
                     print("Try to load", os.path.join(self.path, fname))
+                    if True:
+                        # pickles before spring 2019 need old modules TrfSpec and Pktuple
+                        sys.path.append('/Users/mschmittfull/CODE/lsstools/')
+                        from collections import namedtuple
+                        Pktuple = namedtuple('Pktuple', ['k', 'P', 'num_summands', 'info', 'info_id1', 'info_id2'])
                     p = pickle.load(open(os.path.join(self.path, fname)))
                     #print("keys:", p[(0.1,)].keys())
                     # get dict for comparisons

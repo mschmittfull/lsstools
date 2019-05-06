@@ -31,7 +31,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     Pk_ptcle2grid_deconvolution=None, 
     k_bin_width=1.0, 
     Pk_1d_2d_mode='1d', RSD_poles=None, RSD_Nmu=None, RSD_los=None,
-    kmax=None):
+    kmax=None,
+    save_target_contris=False, save_cholesky_internals=False):
 
     """
     - Given target and source fields in k space (in gridk), compute transfer functions.
@@ -806,7 +807,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         elif N_ortho_iter == 1:
             # not getting trf fcns of orig fields in this case
             trf_results['trf_fcns_orig_fields'] = {}
-            trf_results['CholeskyInternals'] = orth_internals_sources
+            if save_cholesky_internals:
+                trf_results['CholeskyInternals'] = orth_internals_sources
             # {
             #     'Smat': Smat, 'inv_Lmat': inv_Lmat, 'Cmat': Cmat,
             #     'Mrotmat': Mrotmat,
@@ -853,12 +855,13 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     # save info about target contris
     if target_spec is not None:
-        trf_results['target_contris'] = {'target_spec': target_spec,
-                                         'orth_target_contris': orth_target_contris,
-                                         'Amat': Amat,
-                                         'Amat_lambdas': Amat_lambdas,
-                                         'Amat_Qmat': Amat_Qmat,
-                                         'alpha_opt': alpha_opt}
+        if save_target_contris:
+            trf_results['target_contris'] = {'target_spec': target_spec,
+                                             'orth_target_contris': orth_target_contris,
+                                             'Amat': Amat,
+                                             'Amat_lambdas': Amat_lambdas,
+                                             'Amat_Qmat': Amat_Qmat,
+                                             'alpha_opt': alpha_opt}
         
 
     return trf_results

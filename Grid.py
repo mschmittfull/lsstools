@@ -1145,7 +1145,7 @@ class ComplexGrid(Grid):
         RSD_los=None,
         interp_kind=None,
         delete_original_fields=False,
-        test_orthogonality=False):
+        test_orthogonality=False, min_N_modes=3):
         """
         Given all_fields, compute orthogonalized fields using orthogonalization method
         orth_method and N_ortho_iter orthogonalization iterations. Save them on self,
@@ -1161,6 +1161,10 @@ class ComplexGrid(Grid):
             start with orth_prefix (included in orthogonalization) or non_orth_prefix (these will
             not be included in orthogonalization). 
             
+        min_N_modes : int
+            Set power to nan when number of modes is smaller than this. Use to avoid issues with
+            Cholesky when power is measured only for 2 modes or less (e.g. at k=kmin, mu=1).
+
         Returns
         -------
         all_fields : list of strings
@@ -1197,6 +1201,12 @@ class ComplexGrid(Grid):
             Nfields = len(all_fields)
             kvec = Pkmeas[Pkmeas.keys()[0]].k
             Nk = kvec.shape[0]
+            Nmodesvec = Pkmeas[Pkmeas.keys()[0]].Nmodes
+            if Pk_1d_2d_mode == '2d':
+                muvec = Pkmeas[Pkmeas.keys()[0]].mu
+            else:
+                muvec = 0*kvec + np.nan
+
             print("Nfields: %d, Nk: %d" % (Nfields,Nk))
             Smat = np.zeros( (Nfields,Nfields,Nk) ) + np.nan
             for ifield, field in enumerate(all_fields):
@@ -1207,6 +1217,10 @@ class ComplexGrid(Grid):
                 for ifield2 in range(ifield+1,Nfields):
                     Smat[ifield,ifield2,:] = Smat[ifield2,ifield,:]
 
+            # set power to nan when number of modes too small (cholesky is not working in this case)
+            if min_N_modes is not None:
+                ww = np.where(Nmodesvec < min_N_modes)[0]
+                Smat[:,:,ww] = np.nan
 
             if orth_method == 'CholeskyDecomp':
                 # Use Cholesky decomposition of S matrix so that span of first
@@ -1240,7 +1254,9 @@ class ComplexGrid(Grid):
                             Cmat[:,:,ik] = np.dot(np.diag(inv_sqrt_Sii_vec[:,ik]), 
                                                   np.dot(Smat[:,:,ik], np.diag(inv_sqrt_Sii_vec[:,ik])))
                             # do cholesky
-                            print("Do cholesky of:\n", Cmat[:,:,ik])
+                            print("Do cholesky of (k=%g, mu=%s, Nmodes=%d):" % 
+                                (kvec[ik], str(muvec[ik]), Nmodesvec[ik]))
+                            print(Cmat[:,:,ik])
                             L = cholesky(Cmat[:,:,ik], lower=True)
                             inv_Lmat[:,:,ik] = np.linalg.inv(L)
                     if ik<5:

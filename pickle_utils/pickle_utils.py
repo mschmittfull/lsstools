@@ -41,7 +41,7 @@ def get_stacked_pickles(pickle_path, base_fname,
 
     if get_in_path is None:
         # had this in same folder previously
-        from path_utils import get_in_path
+        from perr.path_utils import get_in_path
     
     # PicklesDB instance to load options of all pickles needed for our fit
     pdb = PicklesDB.PicklesDB(
