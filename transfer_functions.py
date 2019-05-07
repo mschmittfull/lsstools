@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 import numpy as np
 from scipy import interpolate as interp
-from lsstools.MeasuredPower import MeasuredPower1D, MeasuredPower2D
+from lsstools.measured_stats import MeasuredPower1D, MeasuredPower2D
 
 # MS packages
 from lsstools import interpolation_utils
