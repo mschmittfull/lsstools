@@ -19,18 +19,26 @@ import paint_utils
 import transfer_functions_from_fields
 
 
-def actually_calc_Pks(opts,
-                      paths,
-                      delete_cache=True,
-                      only_exec_trf_specs_subset=None):
+def paint_combine_and_calc_power(trf_specs,
+                                 paths,
+                                 catalogs,
+                                 needed_densities,
+                                 ext_grids_to_load,
+                                 trf_fcn_opts,
+                                 grid_opts,
+                                 sim_opts,
+                                 power_opts,
+                                 save_grids4plots=False,
+                                 grids4plots_R=None,
+                                 Pkmeas_helper_columns=None,
+                                 delete_cache=True,
+                                 only_exec_trf_specs_subset=None):
     """
     Parameters
     ----------
-    only_exec_trf_specs_subset : None or list.
+    only_exec_trf_specs_subset : None or list
         None: Execute all trf specs.
-        List: Execute only trf specs in the list
-
-    TODO: should only use kwargs, not opts dict...
+        List: Execute only trf specs in the list.
     """
 
     # init some things
@@ -51,11 +59,11 @@ def actually_calc_Pks(opts,
     # ################################################################################
 
     cat_infos = OrderedDict()
-    for cat_id, cat_opts in opts['cats'].items():
+    for cat_id, cat_opts in catalogs.items():
 
         # TODO: could update densities_needed_for_trf_fcns if only_exec_trf_specs_subset is not None.
 
-        if cat_id not in opts['densities_needed_for_trf_fcns']:
+        if cat_id not in needed_densities:
             print("Warning: Not reading %s b/c not needed for trf fcns" %
                   cat_id)
             continue
@@ -65,25 +73,25 @@ def actually_calc_Pks(opts,
             'gridx': gridx,
             'gridk': gridk,
             'cache_path': paths['cache_path'],
-            'Ngrid': opts['Ngrid'],
-            'boxsize': opts['boxsize'],
-            'grid_ptcle2grid_deconvolution':
-            opts['grid_ptcle2grid_deconvolution'],
-            'f_log_growth': opts.get('f_log_growth', None),
-            'kmax': opts['kmax']
+            'Ngrid': grid_opts.Ngrid,
+            'boxsize': sim_opts.boxsize,
+            'grid_ptcle2grid_deconvolution': 
+                grid_opts.grid_ptcle2grid_deconvolution,
+            'f_log_growth': sim_opts.f_log_growth,
+            'kmax': grid_opts.kmax
         }
 
         # nbodykit config
         # TODO: Specify "Painter" dict in cat_opts so we don't need to copy by hand here
         config_dict = {
-            'Nmesh': opts['Ngrid'],
+            'Nmesh': grid_opts.Ngrid,
             'output': os.path.join(paths['cache_path'], 'test_paint_baoshift'),
             'DataSource': {
                 'plugin':
                 'Subsample',
                 'path':
                 get_full_fname(paths['in_path'], cat_opts['in_fname'],
-                               opts['ssseed'])
+                               sim_opts.ssseed)
             },
             'Painter': {
                 'plugin':
@@ -134,9 +142,9 @@ def actually_calc_Pks(opts,
         print(cat_infos[cat_id]['simple'])
         print("")
 
-        # ################################################################################
+        # ######################################################################
         # Cache grid to disk, drop from memory, and reload below
-        # ################################################################################
+        # ######################################################################
         cached_columns += gridk.G.keys()  #dtype.names
         gridk.save_to_bigfile(gridk_cache_fname,
                               gridk.G.keys(),
@@ -146,24 +154,24 @@ def actually_calc_Pks(opts,
             if c != 'ABSK':
                 gridk.drop_column(c)
 
-    for ext_grid_id, ext_grid_spec in opts['ext_grids_to_load'].items():
+    for ext_grid_id, ext_grid_spec in ext_grids_to_load.items():
 
-        # ######################################################################################
+        # ######################################################################
         # Get linear density or other density saved in grid on disk.
-        # ######################################################################################
+        # ######################################################################
 
         #ext_grid_spec['scale_factor']
         print("Attempt reading ext_grid %s:\n%s" %
               (ext_grid_id, str(ext_grid_spec)))
 
         # Factor to linearly rescale deltalin to redshift of the snapshot
-        if ext_grid_spec['scale_factor'] != opts['sim_scale_factor']:
+        if ext_grid_spec['scale_factor'] != sim_opts.sim_scale_factor:
             print("Linearly rescale %s from a=%g to a=%g" %
                   (ext_grid_id, ext_grid_spec['scale_factor'],
-                   opts['sim_scale_factor']))
-            cosmo = CosmoModel(**opts['cosmo_params'])
+                   sim_opts.sim_scale_factor))
+            cosmo = CosmoModel(**(sim_opts.cosmo_params))
             calc_Da = generate_calc_Da(cosmo=cosmo)
-            rescalefac = (calc_Da(opts['sim_scale_factor']) /
+            rescalefac = (calc_Da(sim_opts.sim_scale_factor) /
                           calc_Da(ext_grid_spec['scale_factor']))
             del cosmo
         else:
@@ -177,17 +185,17 @@ def actually_calc_Pks(opts,
             'gridx': gridx,
             'gridk': gridk,
             'cache_path': paths['cache_path'],
-            'Ngrid': opts['Ngrid'],
-            'boxsize': opts['boxsize'],
+            'Ngrid': grid_opts.Ngrid,
+            'boxsize': sim_opts.boxsize,
             'grid_ptcle2grid_deconvolution':
-            opts['grid_ptcle2grid_deconvolution'],
-            'kmax': opts['kmax']
+            grid_opts.grid_ptcle2grid_deconvolution,
+            'kmax': grid_opts.kmax
         }
 
         if ext_grid_spec['file_format'] == 'nbkit_BigFileGrid':
             # nbodykit kit config
             config_dict = {
-                'Nmesh': opts['Ngrid'],
+                'Nmesh': grid_opts.Ngrid,
                 'output': os.path.join(paths['cache_path'],
                                        'test_paint_baoshift'),
                 'DataSource': {
@@ -230,7 +238,8 @@ def actually_calc_Pks(opts,
             gridx.G[ext_grid_id] = (gridx.G[ext_grid_id] - rhobar) / rhobar
             gridx.print_summary_stats(ext_grid_id)
 
-            # scale from redshift of ICs file (usually z=0) to redshift of snapshot
+            # Scale from redshift of ICs file (usually z=0) to redshift of 
+            # simulation snapshot.
             print("Rescale %s by rescalefac=%g" % (ext_grid_id, rescalefac))
             gridx.G[ext_grid_id] *= rescalefac
             gridx.print_summary_stats(ext_grid_id)
@@ -242,9 +251,9 @@ def actually_calc_Pks(opts,
             raise Exception("Iinvalid file_format: %s" %
                             str(ext_grid_id['file_format']))
 
-        # ################################################################################
+        # ######################################################################
         # Cache grid to disk, drop from memory, and reload below
-        # ################################################################################
+        # ######################################################################
         cached_columns += gridk.G.keys()
         print("try caching these columns:", gridk.G.keys())
         gridk.save_to_bigfile(gridk_cache_fname,
@@ -256,63 +265,17 @@ def actually_calc_Pks(opts,
             if c != 'ABSK':
                 gridk.drop_column(c)
 
-    for shifted_ext_grid_id, shifted_ext_grid_spec in opts.get(
-            'shifted_ext_grids', {}).items():
-
-        # ######################################################################################
-        # Shift densities if needed
-        # ######################################################################################
-
-        raise Exception("Not implemented yet")
-
-        print("Try to get shifted grid %s" % shifted_ext_grid_id)
-
-        # load grid_to_shift and displacement_source from cache
-        grid_to_shift_id = shifted_ext_grid_spec['grid_to_shift']
-        displacement_source_id = shifted_ext_grid_spec['displacement_source']
-        gridk.append_columns_from_bigfile(
-            gridk_cache_fname, [grid_to_shift_id, displacement_source_id],
-            replace_existing_col=True)
-
-        # relabel for convenience, so we can apply smoothing etc
-        # (important in case grid_to_shift_id==displacement_source_id but only one shall be smoothed)
-        gridk.append_column('tmp_grid_to_shift', gridk.G[grid_to_shift_id])
-        gridk.append_column('tmp_displacement_source',
-                            gridk.G[displacement_source_id])
-        gridk.drop_column(grid_to_shift_id)
-        if gridk.has_column(displacement_source_id):
-            gridk.drop_column(displacement_source_id)
-        del grid_to_shift_id, displacement_source_id
-
-        # apply smoothing if desired
-        if shifted_ext_grid_spec['grid_to_shift_smoothing'] is not None:
-            gridk.apply_smoothing(
-                'tmp_grid_to_shift',
-                mode=shifted_ext_grid_spec['grid_to_shift_smoothing']['mode'],
-                R=shifted_ext_grid_spec['grid_to_shift_smoothing']['R'],
-                kmax=opts['kmax'])
-        if shifted_ext_grid_spec['displacement_source_smoothing'] is not None:
-            gridk.apply_smoothing(
-                'tmp_displacement_source',
-                mode=shifted_ext_grid_spec['displacement_source_smoothing']
-                ['mode'],
-                R=shifted_ext_grid_spec['displacement_source_smoothing']['R'],
-                kmax=opts['kmax'])
-
-        # to shift a density, create uniform catalog with mass weights 1+delta and then shift that
-
-        raise Exception("continue shifting field")
-
-    # init dicts where to save power specra of best-fit fields and trf fcn results
+    # Init dicts where to save power specra of best-fit fields and trf fcn 
+    # results.
     Pkmeas = OrderedDict()
     trf_results = OrderedDict()
 
-    # ################################################################################
+    # ##########################################################################
     # For each trf fcn spec...
-    # ################################################################################
+    # ##########################################################################
 
     if only_exec_trf_specs_subset is None:
-        exec_trf_specs = opts['trf_specs']
+        exec_trf_specs = trf_specs
     else:
         exec_trf_specs = only_exec_trf_specs_subset
 
@@ -379,44 +342,19 @@ def actually_calc_Pks(opts,
                                           tmp_cols,
                                           replace_existing_col=True)
 
-        # Generate all sources and compute transfer functions at the field level.
-        # Also compute best combination and store in gridk.G[trf_spec.save_bestfit_field].
-        # TODO: too many options, should refactor...
+        # Generate all sources and compute transfer functions at the field 
+        # level. Also compute best combination and store in 
+        # gridk.G[trf_spec.save_bestfit_field].
         trf_results_here = (
             transfer_functions_from_fields.
             generate_sources_and_get_interp_filters_minimizing_sqerror(
+                trf_spec=trf_spec,
                 gridx=gridx,
                 gridk=gridk,
-                linear_sources=trf_spec.linear_sources,
-                fixed_linear_sources=getattr(trf_spec, 'fixed_linear_sources',
-                                             []),
-                non_orth_linear_sources=getattr(trf_spec,
-                                                'non_orth_linear_sources', []),
-                quadratic_sources=trf_spec.quadratic_sources,
-                field_to_smoothen_and_square=trf_spec.
-                field_to_smoothen_and_square,
-                quadratic_sources2=trf_spec.quadratic_sources2,
-                field_to_smoothen_and_square2=trf_spec.
-                field_to_smoothen_and_square2,
-                Rsmooth_for_quadratic_sources=opts[
-                    'Rsmooth_for_quadratic_sources'],
-                Rsmooth_for_quadratic_sources2=opts[
-                    'Rsmooth_for_quadratic_sources2'],
-                sources_for_trf_fcn=trf_spec.sources_for_trf_fcn,
-                target=trf_spec.target_field,
-                target_spec=getattr(trf_spec, 'target_spec', None),
-                save_bestfit_field=trf_spec.save_bestfit_field,
-                N_ortho_iter=opts['N_ortho_iter_for_trf_fcns'],
-                orth_method=opts['orth_method_for_trf_fcns'],
-                interp_kind=opts['interp_kind_for_trf_fcns'],
+                trf_fcn_opts=trf_fcn_opts,
                 bounds_error=False,
-                Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
-                k_bin_width=opts['k_bin_width'],
-                Pk_1d_2d_mode=opts.get('Pk_1d_2d_mode', '1d'),
-                RSD_poles=opts.get('RSD_poles', None),
-                RSD_Nmu=opts.get('RSD_Nmu', None),
-                RSD_los=opts.get('RSD_los', None),
-                kmax=opts['kmax']))
+                power_opts=power_opts,
+                grid_opts=grid_opts))
 
         # save all trf fcns in dict
         trf_results[str(trf_spec)] = trf_results_here
@@ -441,7 +379,7 @@ def actually_calc_Pks(opts,
         cols_Pk = [trf_spec.save_bestfit_field, trf_spec.target_field]
         #cols_Pk += opts['cats'].keys()  # not needed
         #cols_Pk += opts['densities_needed_for_trf_fcns']  # not needed?
-        for ext_grid_id in opts['ext_grids_to_load'].keys():
+        for ext_grid_id in ext_grids_to_load.keys():
             cols_Pk.append(ext_grid_id)
         gridk.append_columns_from_bigfile(gridk_cache_fname,
                                           cols_Pk,
@@ -450,12 +388,7 @@ def actually_calc_Pks(opts,
         # compute power spectra and include them in Pkmeas dict
         Pkmeas = gridk.calc_all_power_spectra(
             columns=cols_Pk,
-            Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
-            k_bin_width=opts['k_bin_width'],
-            mode=opts.get('Pk_1d_2d_mode', '1d'),
-            poles=opts.get('RSD_poles', None),
-            Nmu=opts.get('RSD_Nmu', None),
-            line_of_sight=opts.get('RSD_los', None),
+            power_opts=power_opts,
             Pkmeas=Pkmeas)
         print("cols_Pk:\n", cols_Pk)
 
@@ -472,12 +405,7 @@ def actually_calc_Pks(opts,
 
         Pkmeas = gridk.calc_all_power_spectra(
             columns=[residual_key],
-            Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
-            k_bin_width=opts['k_bin_width'],
-            mode=opts.get('Pk_1d_2d_mode', '1d'),
-            poles=opts.get('RSD_poles', None),
-            Nmu=opts.get('RSD_Nmu', None),
-            line_of_sight=opts.get('RSD_los', None),
+            power_opts=power_opts,
             Pkmeas=Pkmeas)
 
         #raise Exception('compare codes here (this is new code)')
@@ -498,14 +426,14 @@ def actually_calc_Pks(opts,
             print("Exported bestfit field to %s" % out_rho_path)
 
         # save all fields to disk for slice and scatter plotting
-        if opts['save_grids4plots']:
+        if save_grids4plots:
             for col in gridk.G.keys():
                 if col not in ['ABSK']:
                     gridk.store_smoothed_gridx(col,
                                                paths['grids4plots_path'],
                                                col,
                                                helper_gridx=gridx,
-                                               R=opts['grids4plots_R'],
+                                               R=grids4plots_R,
                                                plot=False,
                                                replace_nan=0.0)
 
@@ -516,7 +444,7 @@ def actually_calc_Pks(opts,
     # ############################################################
     # Calculate helper power spectra that are useful for plotting
     # ############################################################
-    cols_Pk = opts['Pkmeas_helper_columns']
+    cols_Pk = Pkmeas_helper_columns
     gridk.append_columns_from_bigfile(
         gridk_cache_fname,
         cols_Pk,
@@ -526,49 +454,9 @@ def actually_calc_Pks(opts,
     # compute power spectra and include them in Pkmeas dict
     Pkmeas = gridk.calc_all_power_spectra(
         columns=cols_Pk,
-        Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
-        k_bin_width=opts['k_bin_width'],
-        mode=opts.get('Pk_1d_2d_mode', '1d'),
-        poles=opts.get('RSD_poles', None),
-        Nmu=opts.get('RSD_Nmu', None),
-        line_of_sight=opts.get('RSD_los', None),
+        power_opts=power_opts,
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
-
-    # # ############################################################
-    # # Calculate some special power spectra of external grids
-    # # ############################################################
-    # special_cols = ['deltalin','deltaZA']
-    # for c in cached_columns:
-    #     if c != 'ABSK':
-    #         gridk.drop_column(c)
-
-    # # ############################################################
-    # # Calculate power spectra of delta's and deltalin and all other external grids.
-    # # ############################################################
-    # if False:
-    #     # takes too much memory
-    #     cols_Pk = [t.save_bestfit_field for t in opts['trf_specs']]
-    #     cols_Pk += opts['cats'].keys()
-    #     for ext_grid_id in opts['ext_grids_to_load'].keys():
-    #         cols_Pk.append(ext_grid_id)
-    #     gridk.append_columns_from_bigfile(gridk_cache_fname, cols_Pk,
-    #                                    replace_existing_col=False)
-
-    #     print("cols_Pk:", cols_Pk)
-    #     print("gridk:", gridk.G.keys())
-
-    #     # Calc a few power spectra
-
-    #     Pkmeas = gridk.calc_all_power_spectra(
-    #         columns=cols_Pk,
-    #         Pk_ptcle2grid_deconvolution=opts['Pk_ptcle2grid_deconvolution'],
-    #         k_bin_width=opts['k_bin_width'],
-    #        mode=opts.get('Pk_1d_2d_mode','1d'), poles=opts.get('RSD_poles',None),
-    #       Nmu=opts.get('RSD_Nmu',None),
-    #        line_of_sight=opts.get('RSD_los',None),
-    #         Pkmeas=Pkmeas)
-    #     print("Pkmeas keys:", Pkmeas.keys())
 
     # ################################################################################
     # Delete temporary files
@@ -588,7 +476,6 @@ def actually_calc_Pks(opts,
         'Pkmeas': Pkmeas,
         'trf_results': trf_results,
         'cat_infos': cat_infos,
-        'opts': opts,
         'gridk_cache_fname': gridk_cache_fname,
         'exec_trf_specs': exec_trf_specs
     }

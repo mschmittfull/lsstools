@@ -994,40 +994,23 @@ class ComplexGrid(Grid):
 
     def calc_all_power_spectra(self,
                                columns=None,
-                               Pk_ptcle2grid_deconvolution=None,
-                               k_bin_width=1.0,
+                               power_opts=None,
                                Pkmeas=None,
-                               verbose=False,
-                               mode='1d',
-                               poles=None,
-                               Nmu=5,
-                               line_of_sight=None):
+                               verbose=False):
         """
-        Calculate power spectra between columns. If columns=None, compute power spectra
-        of all columns of the Grid object.
+        Calculate power spectra between columns. If columns=None, compute power
+        spectra of all columns of the Grid object.
 
-        k_bin_width : float
-            Width of each k bin, in units of k_fundamental=2pi/L. Must be >=1.
-
-        mode : string
-            '1d' or '2d' (use for anisotropic power e.g. due to RSD)
-
-        poles : list
-            Multipoles to measure if mode='2d'. E.g. [0,2,4].
-
-        Nmu : int
-            If not None, measure also P(k,mu), in Nmu mu bins.
-
-        line_of_sight : list
-            Direction of line of sight if mode='2d', e.g. [0,0,1] for z direction.
+        See ``parameters.power_opts`` for description of the options.
         """
         from nbodykit.algorithms.fftpower import FFTPower
         if columns is None and (self.G is not None):
             columns = self.G.keys()
         if Pkmeas is None:
             Pkmeas = OrderedDict()
-        if Pk_ptcle2grid_deconvolution is not None:
+        if power_opts.Pk_ptcle2grid_deconvolution is not None:
             raise Exception("Not implemented")
+        mode = power_opts.Pk_1d_2d_mode
         for id1 in columns:
             for id2 in columns:
                 if (not self.has_column(id1)) or (not self.has_column(id2)):
@@ -1044,7 +1027,7 @@ class ComplexGrid(Grid):
                     # Estimate power.
                     # Marcel code until Jan 2019 used dk=2pi/L and kmin=dk/2.
                     # Checked that measured power spectrum agrees with old code.
-                    Pk_dk = 2.0 * np.pi / self.boxsize * k_bin_width
+                    Pk_dk = 2.0 * np.pi / self.boxsize * power_opts.k_bin_width
                     Pk_kmin = 2.0 * np.pi / self.boxsize / 2.0
                     if mode == '1d':
                         if id1 == id2:
@@ -1065,18 +1048,18 @@ class ComplexGrid(Grid):
                                                 mode=mode,
                                                 dk=Pk_dk,
                                                 kmin=Pk_kmin,
-                                                poles=poles,
-                                                Nmu=Nmu,
-                                                los=line_of_sight)
+                                                poles=power_opts.RSD_poles,
+                                                Nmu=power_opts.RSD_Nmu,
+                                                los=power_opts.RSD_los)
                         else:
                             Pkresult = FFTPower(first=self.G[id1],
                                                 second=self.G[id2],
                                                 mode=mode,
                                                 dk=Pk_dk,
                                                 kmin=Pk_kmin,
-                                                poles=poles,
-                                                Nmu=Nmu,
-                                                los=line_of_sight)
+                                                poles=power_opts.RSD_poles,
+                                                Nmu=power_opts.RSD_Nmu,
+                                                los=power_opts.RSD_los)
 
                     # print info
                     if verbose:
@@ -1092,12 +1075,11 @@ class ComplexGrid(Grid):
                                              str(Pkresult.attrs))
 
                     # save info about Pk and fields for convenience
+                    # TODO: remove redundant entries
                     info = {
                         'Ngrid': self.Ngrid,
                         'boxsize': self.boxsize,
-                        'Pk_ptcle2grid_deconvolution':
-                        Pk_ptcle2grid_deconvolution,
-                        'k_bin_width': k_bin_width,
+                        'power_opts': power_opts,
                         'Pk_attrs': Pkresult.attrs
                     }
 
@@ -1289,12 +1271,7 @@ class ComplexGrid(Grid):
                                       orth_prefix='ORTH s',
                                       non_orth_prefix='NON_ORTH s',
                                       Pkmeas=None,
-                                      Pk_ptcle2grid_deconvolution=None,
-                                      k_bin_width=1.0,
-                                      Pk_1d_2d_mode='1d',
-                                      RSD_poles=None,
-                                      RSD_Nmu=None,
-                                      RSD_los=None,
+                                      power_opts=None,
                                       interp_kind=None,
                                       delete_original_fields=False,
                                       test_orthogonality=False,
@@ -1323,7 +1300,6 @@ class ComplexGrid(Grid):
         all_fields : list of strings
             Column names of the orthogonal fields we computed.
         """
-
         from scipy.linalg import cholesky
         from scipy import interpolate as interp
         import interpolation_utils
@@ -1346,17 +1322,13 @@ class ComplexGrid(Grid):
             # get S_ij^{(n)} matrix
             Pkmeas = self.calc_all_power_spectra(
                 columns=all_fields,
-                Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-                k_bin_width=k_bin_width,
-                mode=Pk_1d_2d_mode,
-                poles=RSD_poles,
-                Nmu=RSD_Nmu,
-                line_of_sight=RSD_los,
+                power_opts=power_opts,
                 Pkmeas=Pkmeas)
             Nfields = len(all_fields)
             kvec = Pkmeas[Pkmeas.keys()[0]].k
             Nk = kvec.shape[0]
             Nmodesvec = Pkmeas[Pkmeas.keys()[0]].Nmodes
+            Pk_1d_2d_mode = power_opts.Pk_1d_2d_mode
             if Pk_1d_2d_mode == '2d':
                 muvec = Pkmeas[Pkmeas.keys()[0]].mu
             else:
@@ -1487,7 +1459,7 @@ class ComplexGrid(Grid):
                                     bounds_error=False,
                                     Ngrid=self.Ngrid,
                                     L=self.boxsize,
-                                    k_bin_width=k_bin_width,
+                                    k_bin_width=power_opts.k_bin_width,
                                     Pkref=Pkmeas[Pkmeas.keys()[0]])
 
                 # Get new orthogonalized fields, q_i = sum_{j<=i} M_ij s_j.

@@ -14,32 +14,13 @@ import interpolation_utils
 
 
 def generate_sources_and_get_interp_filters_minimizing_sqerror(
+        trf_spec,
         gridx=None,
         gridk=None,
-        linear_sources=None,
-        fixed_linear_sources=[],
-        non_orth_linear_sources=[],
-        quadratic_sources=None,
-        field_to_smoothen_and_square=None,
-        Rsmooth_for_quadratic_sources=None,
-        quadratic_sources2=None,
-        field_to_smoothen_and_square2=None,
-        Rsmooth_for_quadratic_sources2=None,
-        sources_for_trf_fcn=None,
-        target=None,
-        target_spec=None,
-        save_bestfit_field=None,
-        N_ortho_iter=0,
-        orth_method='CholeskyDecomp',
-        interp_kind='linear',
+        trf_fcn_opts=None,
+        power_opts=None,
+        grid_opts=None,
         bounds_error=False,
-        Pk_ptcle2grid_deconvolution=None,
-        k_bin_width=1.0,
-        Pk_1d_2d_mode='1d',
-        RSD_poles=None,
-        RSD_Nmu=None,
-        RSD_los=None,
-        kmax=None,
         save_target_contris=False,
         save_cholesky_internals=False):
     """
@@ -55,7 +36,21 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     
     """
 
-    if interp_kind not in ['manual_Pk_k_bins', 'manual_Pk_k_mu_bins']:
+    # get some attrs of the trf_spec
+    linear_sources = trf_spec.linear_sources
+    fixed_linear_sources = getattr(trf_spec, 'fixed_linear_sources', [])
+    non_orth_linear_sources = getattr(trf_spec, 'non_orth_linear_sources', [])
+    quadratic_sources = trf_spec.quadratic_sources
+    field_to_smoothen_and_square = trf_spec.field_to_smoothen_and_square
+    quadratic_sources2 = trf_spec.quadratic_sources2
+    field_to_smoothen_and_square2 = trf_spec.field_to_smoothen_and_square2
+    sources_for_trf_fcn = trf_spec.sources_for_trf_fcn
+    target = trf_spec.target_field
+    target_spec = getattr(trf_spec, 'target_spec', None)
+    save_bestfit_field = trf_spec.save_bestfit_field
+
+    if trf_fcn_opts.interp_kind not in ['manual_Pk_k_bins', 
+                                        'manual_Pk_k_mu_bins']:
         raise Exception(
             "Please use interp_kind=manual_Pk_k_bins or manual_Pk_k_mu_bins")
 
@@ -66,7 +61,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     # linear sources
     if False:
-        for s in linear_sources + non_orth_linear_sources + fixed_linear_sources:
+        for s in linear_sources+non_orth_linear_sources+fixed_linear_sources:
             if not gridk.has_column(s):
                 raise Exception("Linear source %s not on grid" % s)
 
@@ -74,14 +69,15 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     sqcols = []
 
     # smoothen with some R=XX
-    # BUG until 31 dec 2017: always smoothed delta_h rather than field_to_smoothen_and_square
+    # BUG until 31 dec 2017: always smoothed delta_h rather than 
+    # field_to_smoothen_and_square
     if field_to_smoothen_and_square is not None:
         gridk.append_column('%s_smoothed' % field_to_smoothen_and_square,
                             gridk.G[field_to_smoothen_and_square])
         gridk.apply_smoothing('%s_smoothed' % field_to_smoothen_and_square,
                               mode='Gaussian',
-                              R=Rsmooth_for_quadratic_sources,
-                              kmax=kmax)
+                              R=trf_fcn_opts.Rsmooth_for_quadratic_sources,
+                              kmax=grid_opts.kmax)
 
     # compute quadratic sources
     for source in quadratic_sources:
@@ -104,8 +100,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                             gridk.G[field_to_smoothen_and_square2])
         gridk.apply_smoothing('%s_smoothed' % field_to_smoothen_and_square2,
                               mode='Gaussian',
-                              R=Rsmooth_for_quadratic_sources2,
-                              kmax=kmax)
+                              R=trf_fcn_opts.Rsmooth_for_quadratic_sources2,
+                              kmax=grid_opts.kmax)
 
     for source in quadratic_sources2:
         if source not in ['growth', 'tidal_s2', 'tidal_G2', 'F2']:
@@ -132,7 +128,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         for s in sqcols:
             sources.append(s)
         for s in non_orth_linear_sources:
-            # it's important to append this as last sources so other fields get not orthogonalized w.r.t to non_orth fields.
+            # it's important to append this as last sources so other fields get 
+            # not orthogonalized w.r.t to non_orth fields.
             sources.append(s)
     else:
         # use sources supplied by arg
@@ -162,18 +159,14 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 else:
                     raise Exception("Do not know how to generate source %s" % s)
 
-        # ensure that non_orthogonal sources are at the end of the list (important for
-        # orthgonalization procedure)
+        # Ensure that non_orthogonal sources are at the end of the list
+        # (important for orthgonalization procedure).
         N_non_orth_linear_sources = len(non_orth_linear_sources)
         if N_non_orth_linear_sources > 0:
             if not (non_orth_linear_sources ==
                     sources[-N_non_orth_linear_sources:]):
                 raise Exception(
-                    "Non_orth_linear_sources must be listed last in sources_for_trf_fcn"
-                )
-
-        #print("sources:", sources)
-        #raise Exception("todo")
+                    'Non_orth_linear_sources must be listed last in sources_for_trf_fcn')
 
     print("sources:", sources)
 
@@ -205,29 +198,26 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     print("initial_source_of_osource:", initial_source_of_osource)
     Nsources = len(osources)
 
-    # #####################################################################################################
+    # ##########################################################################
     # Compute orthogonalized sources
-    # #####################################################################################################
+    # ##########################################################################
     # modifies gridk, Pkmeas
-    osources, Pkmeas, ortho_rot_matrix_sources, orth_internals_sources = gridk.compute_orthogonalized_fields(
-        N_ortho_iter=N_ortho_iter,
-        orth_method=orth_method,
-        all_in_fields=osources,
-        orth_prefix='ORTH s',
-        non_orth_prefix='NON_ORTH s',
-        Pkmeas=Pkmeas,
-        Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-        k_bin_width=k_bin_width,
-        Pk_1d_2d_mode=Pk_1d_2d_mode,
-        RSD_poles=RSD_poles,
-        RSD_Nmu=RSD_Nmu,
-        RSD_los=RSD_los,
-        interp_kind=interp_kind,
-        delete_original_fields=True)
+    osources, Pkmeas, ortho_rot_matrix_sources, orth_internals_sources = (
+        gridk.compute_orthogonalized_fields(
+            N_ortho_iter=trf_fcn_opts.N_ortho_iter,
+            orth_method=trf_fcn_opts.orth_method,
+            all_in_fields=osources,
+            orth_prefix='ORTH s',
+            non_orth_prefix='NON_ORTH s',
+            power_opts=power_opts,
+            interp_kind=trf_fcn_opts.interp_kind,
+            Pkmeas=Pkmeas,
+            delete_original_fields=True))
 
-    # #####################################################################################################
-    # If target_spec is given, compute composite target field as specified by target_spec
-    # #####################################################################################################
+    # ##########################################################################
+    # If target_spec is given, compute composite target field as specified by
+    # target_spec.
+    # ##########################################################################
 
     if target_spec is not None:
         # compute composite target field.
@@ -361,12 +351,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 # include orth_target_contris
                 Pkmeas = gridk.calc_all_power_spectra(
                     columns=[TMP_target_minus_fixed_sources] + TMP_osources,
-                    Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-                    k_bin_width=k_bin_width,
-                    mode=Pk_1d_2d_mode,
-                    poles=RSD_poles,
-                    Nmu=RSD_Nmu,
-                    line_of_sight=RSD_los,
+                    power_opts=power_opts,
                     Pkmeas=Pkmeas)
 
                 # get trf fcns
@@ -456,13 +441,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
                             tmp_Pkmeas = gridk.calc_all_power_spectra(
                                 columns=['TMP_FIELD_FOR_NORM'],
-                                Pk_ptcle2grid_deconvolution=
-                                Pk_ptcle2grid_deconvolution,
-                                k_bin_width=k_bin_width,
-                                mode=Pk_1d_2d_mode,
-                                poles=RSD_poles,
-                                Nmu=RSD_Nmu,
-                                line_of_sight=RSD_los,
+                                power_opts=power_opts,
                                 Pkmeas=None)
                             tmp_Ptarget = tmp_Pkmeas[('TMP_FIELD_FOR_NORM',
                                                       'TMP_FIELD_FOR_NORM')][1]
@@ -472,13 +451,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                             # (On 64^3 get same result as when constructing target at the field level as above).
                             Pkmeas = gridk.calc_all_power_spectra(
                                 columns=orth_target_contris,
-                                Pk_ptcle2grid_deconvolution=
-                                Pk_ptcle2grid_deconvolution,
-                                k_bin_width=k_bin_width,
-                                mode=Pk_1d_2d_mode,
-                                poles=RSD_poles,
-                                Nmu=RSD_Nmu,
-                                line_of_sight=RSD_los,
+                                power_opts=power_opts,
                                 Pkmeas=Pkmeas)
                             tmp_Ptarget = np.zeros(kvec.shape)
                             for itc, tc in enumerate(orth_target_contris):
@@ -554,12 +527,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 Pkmeas = gridk.calc_all_power_spectra(
                     columns=osources + orth_target_contris +
                     fixed_linear_sources,
-                    Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-                    k_bin_width=k_bin_width,
-                    mode=Pk_1d_2d_mode,
-                    poles=RSD_poles,
-                    Nmu=RSD_Nmu,
-                    line_of_sight=RSD_los,
+                    power_opts=power_opts,
                     Pkmeas=Pkmeas)
 
                 # Compute A matrix: A_ij = delta_ij - sum_\mu^Nsources r_{i\mu} r_{j\mu},
@@ -746,12 +714,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     # calc power spectra
     Pkmeas = gridk.calc_all_power_spectra(
         columns=tmpcols,
-        Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-        k_bin_width=k_bin_width,
-        mode=Pk_1d_2d_mode,
-        poles=RSD_poles,
-        Nmu=RSD_Nmu,
-        line_of_sight=RSD_los,
+        power_opts=power_opts,
         Pkmeas=Pkmeas)
 
     if (target_spec is None) or (target_spec.minimization_objective in [
@@ -765,17 +728,12 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
             sources=osources,
             target=target_minus_fixed_sources,
             Pk=Pkmeas,
-            interp_kind=interp_kind,
+            interp_kind=trf_fcn_opts.interp_kind,
             bounds_error=bounds_error,
             Pkinfo={
                 'Ngrid': gridk.Ngrid,
                 'boxsize': gridk.boxsize,
-                'k_bin_width': k_bin_width,
-                'Pk_1d_2d_mode': Pk_1d_2d_mode,
-                'RSD_poles': 'RSD_poles',
-                'RSD_Nmu': RSD_Nmu,
-                'RSD_los': RSD_los,
-                'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution
+                'power_opts': power_opts
             })
 
     elif target_spec.minimization_objective == '(T*target-T*sources)^2/(T*model)^2':
@@ -798,13 +756,13 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         for counter, s in enumerate(osources):
             #gridk.G[save_bestfit_field] += (
             #    interp_tuple_osources[counter](gridk.G['ABSK'].data) * gridk.G[s])
-            if Pk_1d_2d_mode == '1d':
+            if power_opts.Pk_1d_2d_mode == '1d':
 
                 def multiply_me(k3vec, val, counter=counter):
                     absk = np.sqrt(sum(
                         ki**2 for ki in k3vec))  # absk on the mesh
                     return interp_tuple_osources[counter](absk) * val
-            elif Pk_1d_2d_mode == '2d':
+            elif power_opts.Pk_1d_2d_mode == '2d':
 
                 def multiply_me(k3vec, val, counter=counter):
                     absk = (sum(ki**2 for ki in k3vec))**0.5  # absk on the mesh
@@ -854,6 +812,9 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     # Save trf fncs and other info and return them so we can write them to pickle later.
     # ################################################################################
 
+    N_ortho_iter = trf_fcn_opts.N_ortho_iter
+    orth_method = trf_fcn_opts.orth_method
+
     if N_ortho_iter == 0:
         # have not rotated anything, so orthogonalized sources are same as original ones.
         # copy over power spectra in that case so we can easier plot them later.
@@ -869,22 +830,18 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         'fixed_linear_sources': fixed_linear_sources,
         'quadratic_sources': quadratic_sources,
         'field_to_smoothen_and_square': field_to_smoothen_and_square,
-        'Rsmooth_for_quadratic_sources': Rsmooth_for_quadratic_sources,
+        'trf_fcn_opts': trf_fcn_opts,
         'quadratic_sources2': quadratic_sources2,
         'field_to_smoothen_and_square2': field_to_smoothen_and_square2,
-        'Rsmooth_for_quadratic_sources2': Rsmooth_for_quadratic_sources2,
         'target': target,
         'save_bestfit_field': save_bestfit_field,
-        'N_ortho_iter': N_ortho_iter,
-        'orth_method': orth_method,
         'sources': sources,
         'osources': osources,
         'initial_source_of_osource': initial_source_of_osource,
-        'interp_kind': interp_kind,
         'bounds_error': bounds_error,
-        'Pk_ptcle2grid_deconvolution': Pk_ptcle2grid_deconvolution,
-        'kmax': kmax
     }
+
+    Pk_1d_2d_mode = power_opts.Pk_1d_2d_mode
 
     # eval orth trf fcns at kvec
     kvec = Pkmeas[Pkmeas.keys()[0]].k
@@ -917,7 +874,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     trf_results['kvec'] = kvec
     trf_results['muvec'] = muvec
-    trf_results['Pkmeas'] = Pkmeas
+    # this takes lots of space so skip
+    #trf_results['Pkmeas'] = Pkmeas
     trf_results['trf_fcns_orth_fields'] = trf_fcns_orth_fields
 
     if orth_method == 'CholeskyDecomp':

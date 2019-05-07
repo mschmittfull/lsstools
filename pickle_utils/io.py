@@ -30,7 +30,7 @@ class Pickler(object):
         self.file_format = file_format
 
         # check params
-        if self.file_format not in ['pickle', 'h5']:
+        if self.file_format not in ['pickle', 'dill', 'h5']:
             raise Exception("Invalid file_format: %s" % str(self.file_format))
 
         if self.full_fname is None:
@@ -67,6 +67,9 @@ class Pickler(object):
         #os.system('touch %s' % self.full_fname)
         if self.file_format == 'pickle':
             pickle.dump(pickle_dict, open(self.full_fname, "wb"))
+        elif self.file_format == 'dill':
+            import dill
+            dill.dump(pickle_dict, open(self.full_fname, "wb"))            
         elif self.file_format == 'h5':
             import hickle
             hickle.dump(pickle_dict, self.full_fname, mode="w")
@@ -75,9 +78,13 @@ class Pickler(object):
         print("Reading %s" % self.full_fname)
         if self.file_format == 'pickle':
             return pickle.load(open(self.full_fname))
+        elif self.file_format == 'dill':
+            import dill
+            return dill.load(open(self.full_fname))
         elif self.file_format == 'h5':
             import hickle
             return hickle.load(self.full_fname)
+
 
     def delete_pickle_file(self):
         print("Remove %s" % self.full_fname)

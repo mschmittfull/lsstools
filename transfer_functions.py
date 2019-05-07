@@ -236,7 +236,7 @@ def get_interp_filters_minimizing_sqerror(kvec=None,
                     bounds_error=bounds_error,
                     Ngrid=Pkinfo['Ngrid'],
                     L=Pkinfo['boxsize'],
-                    k_bin_width=Pkinfo['k_bin_width'],
+                    k_bin_width=Pkinfo['power_opts'].k_bin_width,
                     Pkref=Pkref)
         else:
             raise Exception(
