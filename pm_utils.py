@@ -1,4 +1,4 @@
-from __future__ import print_function,division
+from __future__ import print_function, division
 from mpi4py import MPI
 import numpy as np
 from pmesh.pm import RealField, ComplexField
@@ -13,6 +13,7 @@ def ltoc(field, index):
     assert np.array(index).shape == (field.ndim,)
     return tuple(list(index + field.start))
 
+
 def ltoc_index_arr(field, lindex_arr):
     """
     Convert local to collective index, inverting pm.pmesh.Field._ctol. 
@@ -24,10 +25,11 @@ def ltoc_index_arr(field, lindex_arr):
     """
     assert isinstance(field, RealField)
     assert type(lindex_arr) == np.ndarray
-    assert np.all(lindex_arr>=0)
+    assert np.all(lindex_arr >= 0)
     assert lindex_arr.shape[-1] == field.ndim
     cindex_arr = lindex_arr + field.start
     return cindex_arr
+
 
 def cgetitem_index_arr(field, cindex_arr):
     """
@@ -49,16 +51,15 @@ def cgetitem_index_arr(field, cindex_arr):
     """
     assert isinstance(field, RealField)
     assert type(cindex_arr) == np.ndarray
-    assert np.all(cindex_arr>=0)
+    assert np.all(cindex_arr >= 0)
     assert cindex_arr.shape[-1] == field.ndim
     assert field.ndim == 3
     value_arr = np.zeros(cindex_arr.shape[:-1], dtype=field.value.dtype)
-    www = np.where( np.all(cindex_arr>=field.start,axis=-1) & np.all(cindex_arr<(field.start+field.shape),axis=-1) )[0]
-    lindex_wanted = (cindex_arr[www,:]-field.start)
-    value_arr[www] = field[lindex_wanted[:,0], lindex_wanted[:,1], lindex_wanted[:,2]]
+    www = np.where(
+        np.all(cindex_arr >= field.start, axis=-1) &
+        np.all(cindex_arr < (field.start + field.shape), axis=-1))[0]
+    lindex_wanted = (cindex_arr[www, :] - field.start)
+    value_arr[www] = field[lindex_wanted[:, 0], lindex_wanted[:, 1],
+                           lindex_wanted[:, 2]]
     value_arr = field.pm.comm.allreduce(value_arr, op=MPI.SUM)
-    return value_arr                         
-
-
-
-
+    return value_arr

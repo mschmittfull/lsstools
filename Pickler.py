@@ -1,4 +1,4 @@
-from __future__ import print_function,division
+from __future__ import print_function, division
 
 import os
 import sys
@@ -7,13 +7,17 @@ import time
 import numpy as np
 
 
-
 class Pickler(object):
     """
     A class for reading and writing pickle files.
     """
-    def __init__(self, path=None, base_fname=None, full_fname=None,
-                 file_format='pickle', rand_sleep=True):
+
+    def __init__(self,
+                 path=None,
+                 base_fname=None,
+                 full_fname=None,
+                 file_format='pickle',
+                 rand_sleep=True):
         """
         Have 2 options to initialize:
         (a): Specify path and base_fname
@@ -26,7 +30,7 @@ class Pickler(object):
         self.file_format = file_format
 
         # check params
-        if self.file_format not in ['pickle','h5']:
+        if self.file_format not in ['pickle', 'h5']:
             raise Exception("Invalid file_format: %s" % str(self.file_format))
 
         if self.full_fname is None:
@@ -39,14 +43,12 @@ class Pickler(object):
                 time.sleep(np.random.randint(30))
             while file_exists:
                 fname = os.path.join(
-                    self.path, '%s_%s_time%s.%s' % (
-                        self.base_fname, 
-                        time.strftime("%Y_%b_%d_%H:%M:%S", time.gmtime()),
-                        str(int(time.time())),
-                        self.file_format
-                        ))
+                    self.path, '%s_%s_time%s.%s' %
+                    (self.base_fname,
+                     time.strftime("%Y_%b_%d_%H:%M:%S", time.gmtime()),
+                     str(int(time.time())), self.file_format))
                 file_exists = os.path.isfile(fname)
-                if file_exists: 
+                if file_exists:
                     time.sleep(np.random.randint(30))
             # write empty file
             if not os.path.exists(os.path.dirname(fname)):
@@ -81,5 +83,3 @@ class Pickler(object):
         print("Remove %s" % self.full_fname)
         #os.system('rm %s' % self.full_fname)
         os.remove(self.full_fname)
-
-

@@ -1,4 +1,4 @@
-from __future__ import print_function,division
+from __future__ import print_function, division
 
 import numpy as np
 from collections import OrderedDict
@@ -58,7 +58,7 @@ def stack_dicts(dicts_list, skip_keys=[], cnvrt_innerlst_to_nparr=False):
     np.mean(stacked_dict['Pk'], axis=0)
     # which gives array([ 1.5,  2.5,  3.5]).
     """
-    
+
     assert type(dicts_list) == list
     base_dict = dicts_list[0]
 
@@ -68,17 +68,17 @@ def stack_dicts(dicts_list, skip_keys=[], cnvrt_innerlst_to_nparr=False):
             print(sorted(base_dict.keys()))
             print(sorted(d.keys()))
             raise Exception("All dicts of dicts_list must have the same keys.")
-    
+
     stacked_dict = {}
-    for key,value in base_dict.items():
+    for key, value in base_dict.items():
         if key in skip_keys:
             continue
-        
+
         if type(value) in [list, tuple]:
             if cnvrt_innerlst_to_nparr:
                 # try to convert list to a numpy array and then stack that.
                 try:
-                    values_list = [ np.array(d[key]) for d in dicts_list ]
+                    values_list = [np.array(d[key]) for d in dicts_list]
                     # stack the values on the 0th axis
                     stacked_dict[key] = np.stack(values_list, axis=0)
                 except:
@@ -87,47 +87,54 @@ def stack_dicts(dicts_list, skip_keys=[], cnvrt_innerlst_to_nparr=False):
                 # for every entry, call stack_dicts
                 stacked_dict[key] = []
                 for counter, entry in enumerate(value):
-                    tmp_dicts_list = [ {'tmp': d[key][counter]} for d in dicts_list ]
-                    stacked_dict[key].append( stack_dicts(
-                        tmp_dicts_list, 
-                        cnvrt_innerlst_to_nparr=cnvrt_innerlst_to_nparr)['tmp'] )
-        
+                    tmp_dicts_list = [{
+                        'tmp': d[key][counter]
+                    } for d in dicts_list]
+                    stacked_dict[key].append(
+                        stack_dicts(
+                            tmp_dicts_list,
+                            cnvrt_innerlst_to_nparr=cnvrt_innerlst_to_nparr)
+                        ['tmp'])
+
         elif type(value) == np.ndarray:
             # list of arrays.
-            values_list = [ d[key] for d in dicts_list ]
+            values_list = [d[key] for d in dicts_list]
             # stack the arrays on new 0th axis
             stacked_dict[key] = np.stack(values_list, axis=0)
-            
+
         elif np.isscalar(value):
             # create 1d array from scalar
-            values_list = [ np.array([d[key],]) for d in dicts_list ]
+            values_list = [np.array([
+                d[key],
+            ]) for d in dicts_list]
             # stack the values on the 0th axis
             stacked_dict[key] = np.stack(values_list, axis=0)
 
         elif type(value) in [dict, OrderedDict]:
             # recursively call stack_dicts on inner list of dicts
-            values_list = [ d[key] for d in dicts_list ]
+            values_list = [d[key] for d in dicts_list]
             stacked_dict[key] = stack_dicts(values_list, skip_keys=skip_keys)
 
         elif value is None:
             # added on 16 jan 2018; not sure if correct
-            values_list = [ d[key] for d in dicts_list ]
+            values_list = [d[key] for d in dicts_list]
             stacked_dict[key] = values_list
-            
+
         elif isinstance(value, object):
             # convert to dict and then do the same as for dicts
             try:
-                values_list = [ vars(d[key]) for d in dicts_list ]
+                values_list = [vars(d[key]) for d in dicts_list]
             except:
                 print("value:", value)
                 print("type(value):", type(value))
                 print("Error when trying to get values list of:")
                 print(dicts_list)
-                values_list = [ vars(d[key]) for d in dicts_list ]
+                values_list = [vars(d[key]) for d in dicts_list]
             stacked_dict[key] = stack_dicts(values_list, skip_keys=skip_keys)
-            
+
         else:
-            raise Exception("Value of key %s has invalid type %s" % (key,str(type(value))))
+            raise Exception("Value of key %s has invalid type %s" %
+                            (key, str(type(value))))
 
     return stacked_dict
 
@@ -154,7 +161,7 @@ def fill_placeholder_strings(in_dict):
     """
 
     raise Exception("not fully implemented; use symlinks instead")
-    
+
     from copy import deepcopy
     import re
     out_dict = deepcopy(in_dict)
@@ -203,16 +210,19 @@ def nested_dict_update(in_dict, change_list=None):
         for change in change_list:
             assert len(change) == 2
             param_name_tuple, param_val = change[0], change[1]
-            if len(param_name_tuple)==1:
+            if len(param_name_tuple) == 1:
                 out_dict[param_name_tuple[0]] = param_val
-            elif len(param_name_tuple)==2:
+            elif len(param_name_tuple) == 2:
                 out_dict[param_name_tuple[0]][param_name_tuple[1]] = param_val
-            elif len(param_name_tuple)==3:
-                out_dict[param_name_tuple[0]][param_name_tuple[1]][param_name_tuple[2]] = param_val
+            elif len(param_name_tuple) == 3:
+                out_dict[param_name_tuple[0]][param_name_tuple[1]][
+                    param_name_tuple[2]] = param_val
             else:
-                raise Exception("Found tuple in change_list key with invalid size: %s" 
-                                % str(len(param_name_tuple)))
+                raise Exception(
+                    "Found tuple in change_list key with invalid size: %s" %
+                    str(len(param_name_tuple)))
     return out_dict
+
 
 def nested_dict_get(in_dict, nested_key, default=None):
     """
@@ -222,28 +232,32 @@ def nested_dict_get(in_dict, nested_key, default=None):
         Get dict[nested_key]
     Otherwise get dict[nested_key]
     """
-    if (type(nested_key) in [list,tuple]) and (not type(nested_key) == str):
+    if (type(nested_key) in [list, tuple]) and (not type(nested_key) == str):
         # nested_key is a non-string list
         if len(nested_key) == 1:
             return in_dict.get(nested_key[0], default)
         elif len(nested_key) == 2:
-            if in_dict.has_key(nested_key[0]) and in_dict[nested_key[0]].has_key(nested_key[1]):
+            if in_dict.has_key(
+                    nested_key[0]) and in_dict[nested_key[0]].has_key(
+                        nested_key[1]):
                 return in_dict[nested_key[0]][nested_key[1]]
             else:
                 return default
         elif len(nested_key) == 3:
             if (in_dict.has_key(nested_key[0])
-                and in_dict[nested_key[0]].has_key(nested_key[1])
-                and in_dict[nested_key[0]][nested_key[1]].has_key(nested_key[2])):
+                    and in_dict[nested_key[0]].has_key(nested_key[1])
+                    and in_dict[nested_key[0]][nested_key[1]].has_key(
+                        nested_key[2])):
                 return in_dict[nested_key[0]][nested_key[1]][nested_key[2]]
             else:
                 return default
         else:
-            raise Exception("nested_dict_get with nesting depth %d not implemented" % (
-                len(nested_key)))
+            raise Exception(
+                "nested_dict_get with nesting depth %d not implemented" %
+                (len(nested_key)))
     else:
         return in_dict.get(nested_key, default)
-        
+
 
 def change_list_to_dict(change_list):
     """
@@ -252,23 +266,23 @@ def change_list_to_dict(change_list):
     change_dict = OrderedDict()
     if change_list not in [[], None]:
         for change in change_list:
-            assert len(change)==2
+            assert len(change) == 2
             param_name_tuple, param_val = change[0], change[1]
-            if len(param_name_tuple)==1:
+            if len(param_name_tuple) == 1:
                 change_dict[param_name_tuple[0]] = param_val
-            elif len(param_name_tuple)==2:
+            elif len(param_name_tuple) == 2:
                 if param_name_tuple[0] not in change_dict:
                     change_dict[param_name_tuple[0]] = OrderedDict()
-                change_dict[param_name_tuple[0]][param_name_tuple[1]] = param_val
+                change_dict[param_name_tuple[0]][
+                    param_name_tuple[1]] = param_val
             else:
-                raise Exception("Found tuple in change_list key with invalid size: %s" 
-                                % str(len(param_name_tuple)))
-    return change_dict        
+                raise Exception(
+                    "Found tuple in change_list key with invalid size: %s" %
+                    str(len(param_name_tuple)))
+    return change_dict
 
 
 def merge_dicts(dict1, dict2):
     out = dict1.copy()
     out.update(dict2)
     return out
-
-
