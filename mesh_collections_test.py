@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 # MS packages
 from psirec import constants
 from psirec import path_utils
-from lsstools.combine_source_fields_to_match_target import get_full_fname, simplify_cat_info
+from lsstools.combine_fields_to_match_target import get_full_fname
+from lsstools.combine_fields_to_match_target import simplify_cat_info
 from lsstools import paint_utils
 
 
