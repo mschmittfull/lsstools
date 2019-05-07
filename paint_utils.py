@@ -1,23 +1,23 @@
 from __future__ import print_function, division
 
+from collections import OrderedDict
 import cPickle
+import glob
+from mpi4py import MPI
 import numpy as np
 import os
-from collections import OrderedDict
-from mpi4py import MPI
-from scipy import interpolate as interp
 import random
-import glob
+from scipy import interpolate as interp
 import sys
 
-# MS packages
+from mesh_collections import RealGrid, ComplexGrid
 from nbodykit.source.catalog import HDFCatalog
 from nbodykit.source.mesh.bigfile import BigFileMesh
-from Grid import RealGrid, ComplexGrid
-from nbkit03_utils import get_cstat
 from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
+
+from nbkit03_utils import get_cstat
 from pm_utils import ltoc_index_arr, cgetitem_index_arr
 
 

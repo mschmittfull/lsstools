@@ -1,20 +1,20 @@
 from __future__ import print_function, division
+
+from collections import OrderedDict, namedtuple
+import glob
+import json
 import numpy as np
 import os
-from collections import OrderedDict, namedtuple
-from scipy import interpolate as interp
 import random
-import glob
-import sys
-import json
+from scipy import interpolate as interp
 from shutil import rmtree
+import sys
 
 from nbodykit.source.mesh.field import FieldMesh
 
-# MS packages
-from Grid import RealGrid, ComplexGrid
 from cosmo_model import CosmoModel
 from gen_cosmo_fcns import generate_calc_Da
+from mesh_collections import RealGrid, ComplexGrid
 import paint_utils
 import transfer_functions_from_fields
 
