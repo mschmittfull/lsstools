@@ -1,21 +1,21 @@
 from __future__ import print_function, division
 
-import cPickle
-import numpy as np
-import os
 from collections import OrderedDict, namedtuple
+from copy import copy
+import cPickle
 import h5py
 import json
-from copy import copy
+import numpy as np
+import os
 
-# MS packages
+from nbodykit import logging
 from nbodykit.base.mesh import MeshSource
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
-from nbodykit import logging
+
+from MeasuredPower import MeasuredPower1D, MeasuredPower2D
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
 import nbkit03_utils
-from MeasuredPower import MeasuredPower1D, MeasuredPower2D
 """
 Store a collection of nbdodykit MeshSource objects, e.g. RealField objects.
 

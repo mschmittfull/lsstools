@@ -36,3 +36,9 @@ To deactivate it, use
 Contributing
 ------------
 To contribute, create a fork on github, make changes and commits, and submit a pull request on github.
+
+To get consistent code style, run
+
+.. code-block:: bash
+
+  $ yapf -i *.py */*.py
