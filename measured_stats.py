@@ -61,6 +61,7 @@ class MeasuredPower1D(MeasuredPower):
             self.P = self.bstat.power['power'].real
             self.Nmodes = self.bstat.power['modes'].real
 
+        self.Nk = self.k.shape[0]
 
 class MeasuredPower2D(MeasuredPower):
     """
