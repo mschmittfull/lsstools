@@ -54,14 +54,15 @@ def paint_combine_and_calc_power(trf_specs,
     if os.path.exists(gridk_cache_fname):
         rmtree(gridk_cache_fname)
 
-    # ################################################################################
+    # ##########################################################################
     # Compute density of all input catalogs needed for trf fcns
-    # ################################################################################
+    # ##########################################################################
 
     cat_infos = OrderedDict()
     for cat_id, cat_opts in catalogs.items():
 
-        # TODO: could update densities_needed_for_trf_fcns if only_exec_trf_specs_subset is not None.
+        # TODO: could update densities_needed_for_trf_fcns if 
+        # only_exec_trf_specs_subset is not None.
 
         if cat_id not in needed_densities:
             print("Warning: Not reading %s b/c not needed for trf fcns" %
@@ -82,7 +83,8 @@ def paint_combine_and_calc_power(trf_specs,
         }
 
         # nbodykit config
-        # TODO: Specify "Painter" dict in cat_opts so we don't need to copy by hand here
+        # TODO: Specify "Painter" dict in cat_opts so we don't need to copy by
+        # hand here.
         config_dict = {
             'Nmesh': grid_opts.Ngrid,
             'output': os.path.join(paths['cache_path'], 'test_paint_baoshift'),
@@ -294,13 +296,14 @@ def paint_combine_and_calc_power(trf_specs,
             if c != 'ABSK':
                 gridk.drop_column(c)
 
-        # ################################################################################
-        # Compute quadratic fields, trf fcn matched to target field, and best-fit-field,
-        # stored in gridk.G[trf_spec.save_bestfit_field]
-        # ################################################################################
+        # ######################################################################
+        # Compute quadratic fields, trf fcn matched to target field, and 
+        # best-fit-field, stored in gridk.G[trf_spec.save_bestfit_field].
+        # ######################################################################
 
-        # load linear sources, fixed_linear_sources, field_to_square and target_field
-        # TODO: include MatchPower field
+        # load linear sources, fixed_linear_sources, field_to_square and
+        # target_field.
+        # TODO: include MatchPower field.
         tmp_cols = trf_spec.linear_sources[:]
         for col in getattr(trf_spec, 'fixed_linear_sources', []):
             if (col not in tmp_cols) and (col in cached_columns):
@@ -373,9 +376,9 @@ def paint_combine_and_calc_power(trf_specs,
                 new_dataset_for_each_column=True,
                 overwrite_file_if_exists=False)
 
-        # ############################################################
+        # ######################################################################
         # Calculate auto- and cross spectra of target and best-fit-field.
-        # ############################################################
+        # ######################################################################
         cols_Pk = [trf_spec.save_bestfit_field, trf_spec.target_field]
         #cols_Pk += opts['cats'].keys()  # not needed
         #cols_Pk += opts['densities_needed_for_trf_fcns']  # not needed?
@@ -392,9 +395,10 @@ def paint_combine_and_calc_power(trf_specs,
             Pkmeas=Pkmeas)
         print("cols_Pk:\n", cols_Pk)
 
-        # ############################################################
-        # Calculate residual (target-best_fit_field) on grid and get its power spectrum
-        # ############################################################
+        # ######################################################################
+        # Calculate residual (target-best_fit_field) on grid and get its power
+        # spectrum.
+        # ######################################################################
         residual_key = '[%s]_MINUS_[%s]' % (trf_spec.save_bestfit_field,
                                             trf_spec.target_field)
         gridk.append_column(
@@ -412,9 +416,9 @@ def paint_combine_and_calc_power(trf_specs,
 
         print("Pkmeas keys:\n", Pkmeas.keys())
 
-        # ############################################################
+        # ######################################################################
         # Export bestfit field to disk
-        # ############################################################
+        # ######################################################################
         if trf_spec.export_bestfit_field:
             out_rho_fname = os.path.join(
                 opts['out_rho_path'], '%s_TARGET_%s_GRIDK.bigfile' %
@@ -441,9 +445,9 @@ def paint_combine_and_calc_power(trf_specs,
         if c != 'ABSK':
             gridk.drop_column(c)
 
-    # ############################################################
+    # ##########################################################################
     # Calculate helper power spectra that are useful for plotting
-    # ############################################################
+    # ##########################################################################
     cols_Pk = Pkmeas_helper_columns
     gridk.append_columns_from_bigfile(
         gridk_cache_fname,
@@ -458,9 +462,9 @@ def paint_combine_and_calc_power(trf_specs,
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
 
-    # ################################################################################
+    # ##########################################################################
     # Delete temporary files
-    # ################################################################################
+    # ##########################################################################
     # not working in parallel
     # if delete_cache:
     #     for fname in cache_fnames:
@@ -469,9 +473,9 @@ def paint_combine_and_calc_power(trf_specs,
     #os.system('rm -f %s' % fname)
     #os.system('rm -r %s' % paths['cache_path'])
 
-    # #################################################################################
+    # ##########################################################################
     # create pickle dict
-    # #################################################################################
+    # ##########################################################################
     pickle_dict = {
         'Pkmeas': Pkmeas,
         'trf_results': trf_results,
