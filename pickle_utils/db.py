@@ -1,15 +1,13 @@
 from __future__ import print_function, division
 
-import cPickle
-import os
 import cPickle as pickle
 from collections import OrderedDict
 from django.utils.text import get_valid_filename
-import re
 import numpy as np
+import os
+import re
 import sys
 
-# import tinydb
 try:
     from tinydb import TinyDB, Query
 except:

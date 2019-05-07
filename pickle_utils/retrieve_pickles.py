@@ -1,16 +1,16 @@
 from __future__ import print_function, division
 
+from collections import OrderedDict
+import copy
+import cPickle as pickle
+import numpy as np
 import os
 import sys
-import cPickle as pickle
 import time
-import copy
-from collections import OrderedDict
 
-# MS packages
 from lsstools import dict_utils
-from lsstools import Pickler
-import PicklesDB
+from io import Pickler
+from db import PicklesDB
 
 
 def get_stacked_pickles(pickle_path,

@@ -1,10 +1,10 @@
 from __future__ import print_function, division
 
+import cPickle as pickle
+import numpy as np
 import os
 import sys
-import cPickle as pickle
 import time
-import numpy as np
 
 
 class Pickler(object):

@@ -1,13 +1,13 @@
 from __future__ import print_function, division
 
-import numpy as np
-import os
 from collections import OrderedDict
-from scipy import interpolate as interp
+import numpy as np
 import numpy.core.numeric as NX
+import os
+from scipy import interpolate as interp
 import sys
 
-from lsstools.MeasuredPower import MeasuredPower1D, MeasuredPower2D
+from lsstools.measured_stats import MeasuredPower1D, MeasuredPower2D
 
 
 def interp1d_manual_k_binning(kin,

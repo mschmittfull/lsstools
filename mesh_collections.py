@@ -13,7 +13,7 @@ from nbodykit.base.mesh import MeshSource
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
 
-from MeasuredPower import MeasuredPower1D, MeasuredPower2D
+from measured_stats import MeasuredPower1D, MeasuredPower2D
 from nbkit03_utils import get_cstat, get_cstats_string, print_cstats
 import nbkit03_utils
 """
