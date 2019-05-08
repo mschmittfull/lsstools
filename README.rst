@@ -26,7 +26,7 @@ To activate the environment, use
 
   $ source activate nbodykit-0.3.7-env
 
-To deactivate it, use
+To deactivate it, use 
 
 .. code-block:: bash
 
