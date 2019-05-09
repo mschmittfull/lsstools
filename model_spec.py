@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 import json
 
 
@@ -111,3 +111,14 @@ class TargetSpec(object):
 
     def __repr__(self):
         return self.__str__()
+
+
+def check_trf_specs_consistency(trf_specs):
+    """Make sure there are no duplicate save_bestfit_field entries in list
+    of TrfSpec objects.
+    """
+    save_bestfit_fields = [tf.save_bestfit_field for tf in trf_specs]
+    if len(Counter(save_bestfit_fields)) != len(trf_specs):
+        raise Exception("Found duplicate save_bestfit_field: %str" %
+                        str(Counter(save_bestfit_fields)))
+
