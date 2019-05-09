@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 # Bunch parameters together to simplify arguments of functions.
 
@@ -88,10 +88,13 @@ class PowerOpts(object):
 
 
 class SimOpts(object):
-
-    def __init__(self, boxsize, sim_scale_factor, cosmo_params, **kwargs):
+    def __init__(self, 
+                 boxsize=None,
+                 sim_scale_factor=None,
+                 cosmo_params=None,
+                 **kwargs):
         """
-        Simulation options.
+        Simulation options. For each simulation, write a subclass.
 
         Parameters
         ----------
@@ -113,9 +116,9 @@ class SimOpts(object):
             setattr(self, k, v)
 
     @staticmethod
-    def load_default_opts(sim_name, **kwargs):
+    def load_default_opts(**kwargs):
         """Load default options of a simulation. They can be overwritten using
-        kwargs.
+        kwargs. Should be implemented by child classes.
 
         Parameters
         ----------
@@ -125,73 +128,7 @@ class SimOpts(object):
         -------
         sim_opts : SimOpts object
         """
-        if sim_name in ['ms_gadget_test_data', 'ms_gadget']:
-            # L=500 ms_gadget sims produced with MP-Gadget, 1536^3 particles,
-            # 64^3 test data.
-            default = {}
-            default['sim_name'] = sim_name
-            default['boxsize'] = 500.0
-            default['sim_scale_factor'] = 0.6250
-            default['sim_irun'] = 4
-            default['sim_seed'] = 403
-            # seed used to draw subsample
-            default['ssseed'] = 40000 + default['sim_seed']
-            # Nbody, so used thousands of time steps
-            default['sim_Ntimesteps'] = None
-            default['sim_Nptcles'] = 1536
-            default['sim_wig_now_string'] = 'wig'
-            # halo mass
-            default['halo_mass_string'] = '13.8_15.1'
-
-            # cosmology
-            # omega_m = 0.307494
-            # omega_bh2 = 0.022300
-            # omega_ch2 = 0.118800
-            # h = math.sqrt((omega_bh2 + omega_ch2) / omega_m) = 0.6774
-            default['cosmo_params'] = dict(Om_m=0.307494,
-                                           Om_L=1.0 - 0.307494,
-                                           Om_K=0.0,
-                                           Om_r=0.0,
-                                           h0=0.6774)
-
-        elif sim_name == 'jerryou_baoshift':
-            # cosmology
-            # omega_m = 0.307494
-            # omega_bh2 = 0.022300
-            # omega_ch2 = 0.118800
-            # h = math.sqrt((omega_bh2 + omega_ch2) / omega_m) = 0.6774
-            default['cosmo_params'] = dict(Om_m=0.307494,
-                                           Om_L=1.0 - 0.307494,
-                                           Om_K=0.0,
-                                           Om_r=0.0,
-                                           h0=0.6774)
-            raise Exception('todo: include more default params')
-
-        elif sim_name == 'RunPB':
-            # RunPB by Martin White; read cosmology from Martin email
-            #omega_bh2=0.022
-            #omega_m=0.292
-            #h=0.69
-            # Martin rescaled sigma8 from camb from 0.84 to 0.82 to set up ICs.
-            # But no need to include here b/c we work with that rescaled 
-            # deltalin directly (checked that linear power agrees with nonlinear
-            # one if rescaled deltalin rescaled by D(z).
-            default['cosmo_params'] = dict(Om_m=0.292,
-                                           Om_L=1.0 - 0.292,
-                                           Om_K=0.0,
-                                           Om_r=0.0,
-                                           h0=0.69)
-            raise Exception('todo: include more default params for RunPB')
-
-        else:
-            raise Exception('Invalid sim_name %s' % sim_name)
-
-        # update keys given in kwargs
-        opts_dict = default.copy()
-        opts_dict.update(kwargs)
-
-        sim_opts = SimOpts(**opts_dict)
-        return sim_opts
+        raise NotImplementedError("To be implemented by child classes.")
 
     def get_default_ext_grids_to_load(self,
                                       Ngrid,
@@ -219,84 +156,186 @@ class SimOpts(object):
             Dictionary with keys labeling the external grids and values
             specifying how to load the external grids.
         """
-        if self.sim_name.startswith('ms_gadget'):
+        raise NotImplementedError("To be implemented by child classes.")
 
-            ext_grids = OrderedDict()
+    def get_default_catalogs(self):
+        """Default catalogs to load for given sims.
+        """
+        raise NotImplementedError("To be implemented by child classes.")
 
-            if True:
-                # linear density (ICs of the sims)
-                # deltalin from mesh (created on mesh, no particles involved)
-                ext_grids['deltalin'] = {
-                    'dir': 'IC_LinearMesh_z0_Ng%d' % Ngrid,
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': 1.0,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
 
-            if False:
-                # deltalin from ptcles (created from particle snapshot so
-                # includes CIC artifacts)
-                # on 64^3, noise curves looked the same as with linearMesh
-                ext_grids['deltalin_PtcleDens'] = {
-                    'dir': 'IC_PtcleDensity_Ng%d' % Ngrid,
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': 1.0 / (1.0 + 99.0),  # ICs are at z=99
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+class MSGadgetSimOpts(SimOpts):
+    def __init__(self, boxsize, sim_scale_factor, cosmo_params, **kwargs):
+        """
+        Simulations options for ms_gadget sims.
+        """
+        super(MSGadgetSimOpts, self).__init__(
+            boxsize,
+            sim_scale_factor,
+            cosmo_params,
+            **kwargs
+        )
 
-            if False:
-                # delta_ZA, created by moving 1536^3 ptcles with NGenic
-                # (includes CIC artifacts, small shot noise)
-                ext_grids['deltaZA'] = {
+    @staticmethod
+    def load_default_opts(**kwargs):
+        """See parent class.
+        """
+        # L=500 ms_gadget sims produced with MP-Gadget, 1536^3 particles,
+        # 64^3 test data.
+        default = {}
+        default['sim_name'] = 'ms_gadget'
+        default['boxsize'] = 500.0
+        default['sim_scale_factor'] = 0.6250
+        default['sim_irun'] = 4
+        default['sim_seed'] = 403
+        # seed used to draw subsample
+        default['ssseed'] = 40000 + default['sim_seed']
+        # Nbody, so used thousands of time steps
+        default['sim_Ntimesteps'] = None
+        default['sim_Nptcles'] = 1536
+        default['sim_wig_now_string'] = 'wig'
+        default['f_log_growth'] = None
+        # halo mass
+        default['halo_mass_string'] = '13.8_15.1'
+
+        # cosmology
+        # omega_m = 0.307494
+        # omega_bh2 = 0.022300
+        # omega_ch2 = 0.118800
+        # h = math.sqrt((omega_bh2 + omega_ch2) / omega_m) = 0.6774
+        default['cosmo_params'] = dict(Om_m=0.307494,
+                                       Om_L=1.0 - 0.307494,
+                                       Om_K=0.0,
+                                       Om_r=0.0,
+                                       h0=0.6774)
+
+        # update with kwargs and return
+        default.update(kwargs)
+        return MSGadgetSimOpts(**default)
+
+    def get_default_ext_grids_to_load(self,
+                                      Ngrid,
+                                      include_shifted_fields=True,
+                                      shifted_fields_RPsi=0.23,
+                                      shifted_fields_Np=1536,
+                                      shifted_fields_Nmesh=1536):
+        """See parent class.
+        """
+        ext_grids = OrderedDict()
+
+        if True:
+            # linear density (ICs of the sims)
+            # deltalin from mesh (created on mesh, no particles involved)
+            ext_grids['deltalin'] = {
+                'dir': 'IC_LinearMesh_z0_Ng%d' % Ngrid,
+                'file_format': 'nbkit_BigFileGrid',
+                'dataset_name': 'Field',
+                'scale_factor': 1.0,
+                'nbkit_normalize': True,
+                'nbkit_setMean': 0.0
+            }
+
+        if False:
+            # deltalin from ptcles (created from particle snapshot so
+            # includes CIC artifacts)
+            # on 64^3, noise curves looked the same as with linearMesh
+            ext_grids['deltalin_PtcleDens'] = {
+                'dir': 'IC_PtcleDensity_Ng%d' % Ngrid,
+                'file_format': 'nbkit_BigFileGrid',
+                'dataset_name': 'Field',
+                'scale_factor': 1.0 / (1.0 + 99.0),  # ICs are at z=99
+                'nbkit_normalize': True,
+                'nbkit_setMean': 0.0
+            }
+
+        if False:
+            # delta_ZA, created by moving 1536^3 ptcles with NGenic
+            # (includes CIC artifacts, small shot noise)
+            ext_grids['deltaZA'] = {
+                'dir':
+                'ZA_%.4f_PtcleDensity_Ng%d' %
+                (self.sim_scale_factor, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
+
+        if True:
+            # deltanonl painted from all 1536^3 DM particles (includes CIC
+            # artifacts, small shot noise)
+            ext_grids['delta_m'] = {
+                'dir':
+                'snap_%.4f_PtcleDensity_Ng%d' %
+                (self.sim_scale_factor, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
+
+        if include_shifted_fields:
+
+            ## Shifted fields
+            #for psi_type_str in ['','Psi2LPT_']:
+            psi_type_str = ''
+
+            # 1 shifted by deltalin_Zeldovich displacement (using nbkit0.3;
+            # same as delta_ZA)
+            ext_grids['1_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
+                'dir':
+                '1_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
+                % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                   shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
+
+            # deltalin shifted by deltalin_Zeldovich displacement (using 
+            # nbkit0.3)
+            ext_grids['deltalin_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
+                'dir':
+                'IC_LinearMesh_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
+                % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                   shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
+
+            # deltalin^2 shifted by deltalin_Zeldovich displacement (using 
+            # nbkit0.3)
+            ext_grids[
+                'deltalin_growth-mean_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
                     'dir':
-                    'ZA_%.4f_PtcleDensity_Ng%d' %
-                    (self.sim_scale_factor, Ngrid),
-                    'file_format':
-                    'nbkit_BigFileGrid',
-                    'dataset_name':
-                    'Field',
-                    'scale_factor':
-                    self.sim_scale_factor,
-                    'nbkit_normalize':
-                    True,
-                    'nbkit_setMean':
-                    0.0
-                }
-
-            if True:
-                # deltanonl painted from all 1536^3 DM particles (includes CIC
-                # artifacts, small shot noise)
-                ext_grids['delta_m'] = {
-                    'dir':
-                    'snap_%.4f_PtcleDensity_Ng%d' %
-                    (self.sim_scale_factor, Ngrid),
-                    'file_format':
-                    'nbkit_BigFileGrid',
-                    'dataset_name':
-                    'Field',
-                    'scale_factor':
-                    self.sim_scale_factor,
-                    'nbkit_normalize':
-                    True,
-                    'nbkit_setMean':
-                    0.0
-                }
-
-            if include_shifted_fields:
-
-                ## Shifted fields
-                #for psi_type_str in ['','Psi2LPT_']:
-                psi_type_str = ''
-
-                # 1 shifted by deltalin_Zeldovich displacement (using nbkit0.3;
-                # same as delta_ZA)
-                ext_grids['1_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
-                    'dir':
-                    '1_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
+                    'IC_LinearMesh_growth-mean_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
                     % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                        shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
                     'file_format':
@@ -311,152 +350,179 @@ class SimOpts(object):
                     0.0
                 }
 
-                # deltalin shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
-                    'dir':
-                    'IC_LinearMesh_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
-                    'file_format':
-                    'nbkit_BigFileGrid',
-                    'dataset_name':
-                    'Field',
-                    'scale_factor':
-                    self.sim_scale_factor,
-                    'nbkit_normalize':
-                    True,
-                    'nbkit_setMean':
-                    0.0
-                }
+            # G2[deltalin] shifted by deltalin_Zeldovich displacement (using 
+            # nbkit0.3)
+            ext_grids['deltalin_G2_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
+                'dir':
+                'IC_LinearMesh_tidal_G2_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
+                % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                   shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
 
-                # deltalin^2 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids[
-                    'deltalin_growth-mean_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
-                        'dir':
-                        'IC_LinearMesh_growth-mean_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
-                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
-                        'file_format':
-                        'nbkit_BigFileGrid',
-                        'dataset_name':
-                        'Field',
-                        'scale_factor':
-                        self.sim_scale_factor,
-                        'nbkit_normalize':
-                        True,
-                        'nbkit_setMean':
-                        0.0
-                    }
-
-                # G2[deltalin] shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_G2_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
-                    'dir':
-                    'IC_LinearMesh_tidal_G2_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
-                    'file_format':
-                    'nbkit_BigFileGrid',
-                    'dataset_name':
-                    'Field',
-                    'scale_factor':
-                    self.sim_scale_factor,
-                    'nbkit_normalize':
-                    True,
-                    'nbkit_setMean':
-                    0.0
-                }
-
-                # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
-                    'dir':
-                    'IC_LinearMesh_cube-mean_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
-                    'file_format':
-                    'nbkit_BigFileGrid',
-                    'dataset_name':
-                    'Field',
-                    'scale_factor':
-                    self.sim_scale_factor,
-                    'nbkit_normalize':
-                    True,
-                    'nbkit_setMean':
-                    0.0
-                }
-
-        else:
-            raise Exception('Invalid sim_name %s' % self.sim_name)
+            # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
+            # nbkit0.3)
+            ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin' % psi_type_str] = {
+                'dir':
+                'IC_LinearMesh_cube-mean_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum'
+                % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                   shifted_fields_Np, shifted_fields_Nmesh, Ngrid),
+                'file_format':
+                'nbkit_BigFileGrid',
+                'dataset_name':
+                'Field',
+                'scale_factor':
+                self.sim_scale_factor,
+                'nbkit_normalize':
+                True,
+                'nbkit_setMean':
+                0.0
+            }
 
         return ext_grids
 
     def get_default_catalogs(self):
+        """Default catalogs to load for ms_gadget sims.
         """
-        Default catalogs to load for a given simulation.
+        cats = OrderedDict()
+
+        tmp_halo_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25' % (
+            self.sim_scale_factor)
+
+        ## nonuniform catalogs without ptcle masses
+        if True:
+            # halos without mass weight, narrow mass cuts: 10.8..11.8..12.8
+            # ..13.8..15.1
+            cats['delta_h'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5" %
+                (tmp_halo_dir, self.halo_mass_string),
+                'weight_ptcles_by':
+                None
+            }
+
+        if False:
+            # halos not weighted by mass but including mass info in file,
+            # broad mass cut
+            # TODO: looks like nbodykit 0.3 does not read this properly b/c
+            # of hdf5. Should switch all files to bigfile at some point.
+            cats['delta_h'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_WithMassCols.hdf5_BOUNDS_log10M_%s.hdf5" %
+                (tmp_halo_dir, self.halo_mass_string),
+                'weight_ptcles_by':
+                None
+            }
+
+        if False:
+            # halos in narrow mass bins, no mass weights
+            cats['delta_h_M10.8-11.8'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_10.8_11.8.hdf5" %
+                tmp_halo_dir,
+                'weight_ptcles_by':
+                None
+            }
+            cats['delta_h_M11.8-12.8'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_11.8_12.8.hdf5" %
+                tmp_halo_dir,
+                'weight_ptcles_by':
+                None
+            }
+            cats['delta_h_M12.8-13.8'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_12.8_13.8.hdf5" %
+                tmp_halo_dir,
+                'weight_ptcles_by':
+                None
+            }
+            cats['delta_h_M13.8-15.1'] = {
+                'in_fname':
+                "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_13.8_15.1.hdf5" %
+                tmp_halo_dir,
+                'weight_ptcles_by':
+                None
+            }
+
+        return cats
+
+
+class JerryBAOShiftSimOpts(SimOpts):
+    def __init__(self, boxsize, sim_scale_factor, cosmo_params, **kwargs):
         """
-        if self.sim_name in ['ms_gadget_test_data', 'ms_gadget']:
+        Simulations options for Jerry's BAO shift sims.
+        """
+        super(MSGadgetSimOpts, self).__init__(
+            boxsize,
+            sim_scale_factor,
+            cosmo_params,
+            **kwargs
+        )
 
-            tmp_halo_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25' % (
-                self.sim_scale_factor)
+    @staticmethod
+    def load_default_opts(**kwargs):
+        """See parent class.
+        """
+        default = {}
+        default['sim_name'] = 'jerryou_baoshift'
+        
+        # cosmology
+        # omega_m = 0.307494
+        # omega_bh2 = 0.022300
+        # omega_ch2 = 0.118800
+        # h = math.sqrt((omega_bh2 + omega_ch2) / omega_m) = 0.6774
+        default['cosmo_params'] = dict(Om_m=0.307494,
+                                       Om_L=1.0 - 0.307494,
+                                       Om_K=0.0,
+                                       Om_r=0.0,
+                                       h0=0.6774)
 
-            ## nonuniform catalogs without ptcle masses
-            if True:
-                # halos without mass weight, narrow mass cuts: 10.8..11.8..12.8
-                # ..13.8..15.1
-                opts['cats']['delta_h'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5" %
-                    (tmp_halo_dir, self.halo_mass_string),
-                    'weight_ptcles_by':
-                    None
-                }
+        raise Exception('TODO: include more default params')
 
-            if False:
-                # halos not weighted by mass but including mass info in file,
-                # broad mass cut
-                # TODO: looks like nbodykit 0.3 does not read this properly b/c
-                # of hdf5. Should switch all files to bigfile at some point.
-                opts['cats']['delta_h'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_WithMassCols.hdf5_BOUNDS_log10M_%s.hdf5" %
-                    (tmp_halo_dir, self.halo_mass_string),
-                    'weight_ptcles_by':
-                    None
-                }
 
-            if False:
-                # halos in narrow mass bins, no mass weights
-                opts['cats']['delta_h_M10.8-11.8'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_10.8_11.8.hdf5" %
-                    tmp_halo_dir,
-                    'weight_ptcles_by':
-                    None
-                }
-                opts['cats']['delta_h_M11.8-12.8'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_11.8_12.8.hdf5" %
-                    tmp_halo_dir,
-                    'weight_ptcles_by':
-                    None
-                }
-                opts['cats']['delta_h_M12.8-13.8'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_12.8_13.8.hdf5" %
-                    tmp_halo_dir,
-                    'weight_ptcles_by':
-                    None
-                }
-                opts['cats']['delta_h_M13.8-15.1'] = {
-                    'in_fname':
-                    "%s/fof_nbkfmt.hdf5_WithMassCols_BOUNDS_log10M_13.8_15.1.hdf5" %
-                    tmp_halo_dir,
-                    'weight_ptcles_by':
-                    None
-                }
+class RunPBSimOpts(SimOpts):
+    def __init__(self, boxsize, sim_scale_factor, cosmo_params, **kwargs):
+        """
+        Simulations options for Martin White's RunPB sims.
+        """
+        super(MSGadgetSimOpts, self).__init__(
+            boxsize,
+            sim_scale_factor,
+            cosmo_params,
+            **kwargs
+        )
 
-        else:
-            raise Exception("Invalid sim_name %s" % self.sim_name)
+    @staticmethod
+    def load_default_opts(**kwargs):
+        """See parent class.
+        """
+        default = {}
+        default['sim_name'] = 'RunPB'
+
+        # RunPB by Martin White; read cosmology from Martin email
+        #omega_bh2=0.022
+        #omega_m=0.292
+        #h=0.69
+        # Martin rescaled sigma8 from camb from 0.84 to 0.82 to set up ICs.
+        # But no need to include here b/c we work with that rescaled 
+        # deltalin directly (checked that linear power agrees with nonlinear
+        # one if rescaled deltalin rescaled by D(z).
+        default['cosmo_params'] = dict(Om_m=0.292,
+                                       Om_L=1.0 - 0.292,
+                                       Om_K=0.0,
+                                       Om_r=0.0,
+                                       h0=0.69)
+
+        raise Exception('TODO: include more default params for RunPB')
+
+
