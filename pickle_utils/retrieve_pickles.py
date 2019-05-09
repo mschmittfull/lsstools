@@ -48,11 +48,11 @@ def get_stacked_pickles(pickle_path,
         from perr.path_utils import get_in_path
 
     # PicklesDB instance to load options of all pickles needed for our fit
-    pdb = PicklesDB.PicklesDB(path=pickle_path,
-                              fname_pattern=fname_pattern,
-                              comp_key=comp_key,
-                              data_keys=['Pkmeas', 'Pkmeas_step'],
-                              force_update=False)
+    pdb = PicklesDB(path=pickle_path,
+                    fname_pattern=fname_pattern,
+                    comp_key=comp_key,
+                    data_keys=['Pkmeas', 'Pkmeas_step'],
+                    force_update=False)
 
     # Get the entry of the base_fname
     print("Search for ", base_fname)
@@ -168,11 +168,11 @@ def get_stacked_pickles_for_varying_base_opts(
         from path_utils import get_in_path
 
     # PicklesDB instance to load options of all pickles needed
-    pdb = PicklesDB.PicklesDB(path=pickle_path,
-                              fname_pattern=fname_pattern,
-                              comp_key=comp_key,
-                              data_keys=['Pkmeas', 'Pkmeas_step'],
-                              force_update=False)
+    pdb = PicklesDB(path=pickle_path,
+                    fname_pattern=fname_pattern,
+                    comp_key=comp_key,
+                    data_keys=['Pkmeas', 'Pkmeas_step'],
+                    force_update=False)
 
     # Get the entry of the base_fname
     print("Search for ", base_fname)

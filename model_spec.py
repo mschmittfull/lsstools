@@ -5,7 +5,6 @@ import json
 
 
 class TrfSpec:
-
     def __init__(
             self,
             linear_sources=None,  # get trf fcns
@@ -85,7 +84,6 @@ class TargetSpec(object):
     """
     Specify target field that's composed of several fields.
     """
-
     def __init__(
             self,
             linear_target_contris=None,  # linear contributions to target field
