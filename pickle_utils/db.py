@@ -6,6 +6,7 @@ from django.utils.text import get_valid_filename
 import numpy as np
 import os
 import re
+from subprocess import call
 import sys
 
 try:
@@ -70,14 +71,20 @@ class PicklesDB(object):
         self.query = Query()
 
         # test query
-        test_res = [
-            entry['pickle_fname']
-            for entry in self.db.search(self.query['Rsmooth'] == 10.)
-        ]
+        #test_res = [
+        #    entry['pickle_fname']
+        #    for entry in self.db.search(self.query['Rsmooth'] == 10.)
+        #]
 
     def update(self):
 
         if self.force_update or (not self.is_up_to_date()):
+
+            print("PicklesDB: Delete empty pickle files...")
+            call('find %s -name "*.pickle" -type f -empty -delete' % self.path,
+                 shell=True)
+            call('find %s -name "*.dill" -type f -empty -delete' % self.path,
+                 shell=True)
 
             print("PicklesDB: Read all pickles to update db...")
             # loop over all files mathcing the pattern in the folder

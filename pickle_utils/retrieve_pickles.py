@@ -103,7 +103,7 @@ def get_stacked_pickles(pickle_path,
                     reference_dict, ignore_keys=ignore_pickle_keys)
             full_fname = os.path.join(pickle_path, fname)
             pickles_list.append(
-                Pickler.Pickler(full_fname=full_fname).read_pickle())
+                Pickler(full_fname=full_fname).read_pickle())
         # stack pickles
         if outer_key_name == '__NO_OUTER_KEY__':
             stacked_pickles = dict_utils.stack_dicts(
@@ -228,7 +228,7 @@ def get_stacked_pickles_for_varying_base_opts(
                 base_vp_pickle_fname = fname
             full_fname = os.path.join(pickle_path, fname)
             pickles_list.append(
-                Pickler.Pickler(full_fname=full_fname).read_pickle())
+                Pickler(full_fname=full_fname).read_pickle())
         # stack pickles
         stacked_vp_pickles[pnames_and_values] = dict_utils.stack_dicts(
             pickles_list, skip_keys=skip_keys_when_stacking)

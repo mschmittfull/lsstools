@@ -29,7 +29,8 @@ class MSGadgetSimOpts(SimOpts):
         default['sim_irun'] = 4
         default['sim_seed'] = 403
         # seed used to draw subsample
-        default['ssseed'] = 40000 + default['sim_seed']
+        #default['ssseed'] = 40000 + default['sim_seed']
+        default['ssseed'] = None
         # Nbody, so used thousands of time steps
         default['sim_Ntimesteps'] = None
         default['sim_Nptcles'] = 1536
