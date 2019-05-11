@@ -4,7 +4,7 @@ Tools for large-scale structure analysis.
 
 Usage
 -----
-For an example of how to use the code, see `perr <https://github.com/mschmittfull/perr>`_ which computes the error of a bias model at the field level based on https://arxiv.org/abs/1811.10640.
+For an example of how to use the code, see `perr <https://github.com/mschmittfull/perr>`_ which computes the error of a bias model at the field level following https://arxiv.org/abs/1811.10640.
 
 
 Installation
