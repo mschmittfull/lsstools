@@ -32,7 +32,8 @@ def paint_combine_and_calc_power(trf_specs,
                                  grids4plots_R=None,
                                  Pkmeas_helper_columns=None,
                                  delete_cache=True,
-                                 only_exec_trf_specs_subset=None):
+                                 only_exec_trf_specs_subset=None,
+                                 calc_power_of_ext_grids=False):
     """
     Parameters
     ----------
@@ -382,8 +383,9 @@ def paint_combine_and_calc_power(trf_specs,
         cols_Pk = [trf_spec.save_bestfit_field, trf_spec.target_field]
         #cols_Pk += opts['cats'].keys()  # not needed
         #cols_Pk += opts['densities_needed_for_trf_fcns']  # not needed?
-        for ext_grid_id in ext_grids_to_load.keys():
-            cols_Pk.append(ext_grid_id)
+        if calc_power_of_ext_grids:
+            for ext_grid_id in ext_grids_to_load.keys():
+                cols_Pk.append(ext_grid_id)
         gridk.append_columns_from_bigfile(gridk_cache_fname,
                                           cols_Pk,
                                           replace_existing_col=False)
@@ -459,8 +461,10 @@ def paint_combine_and_calc_power(trf_specs,
     Pkmeas = gridk.calc_all_power_spectra(
         columns=cols_Pk,
         power_opts=power_opts,
+        calc_cross_spectra=False,
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
+    print("All Pkmeas cols:", Pkmeas.keys())
 
     # ##########################################################################
     # Delete temporary files

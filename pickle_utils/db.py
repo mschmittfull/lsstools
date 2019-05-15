@@ -29,7 +29,7 @@ class PicklesDB(object):
 
     def __init__(self,
                  path=None,
-                 fname_pattern=r'^main_do_rec.*.pickle$',
+                 fname_pattern=r'^main_calc_Perr.*.dill$',
                  comp_key='opts',
                  data_keys=['Pkmeas', 'Pkmeas_step'],
                  force_update=False):
@@ -226,13 +226,13 @@ class PicklesDB(object):
         # get time for each fname by parsing fname (must end with time....pickle)
         tnlist = []
         for f in fnames:
-            match = re.search(r'time(\d+)\.pickle$', f)
+            match = re.search(r'time(\d+)\.dill$', f)
             if match:
                 mytime = int(match.group(1))
                 tnlist.append(TimeAndName(mytime, f))
             else:
                 raise Exception(
-                    "Pickle filenames must end with time\d+\.pickle. Got %s" %
+                    "Pickle filenames must end with time\d+\.dill. Got %s" %
                     f)
         # sort the tnlist by time
         from operator import attrgetter

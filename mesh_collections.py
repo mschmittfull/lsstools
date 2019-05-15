@@ -996,6 +996,8 @@ class ComplexGrid(Grid):
                                columns=None,
                                power_opts=None,
                                Pkmeas=None,
+                               calc_auto_spectra=True,
+                               calc_cross_spectra=True,
                                verbose=False):
         """
         Calculate power spectra between columns. If columns=None, compute power
@@ -1030,20 +1032,24 @@ class ComplexGrid(Grid):
                     Pk_dk = 2.0 * np.pi / self.boxsize * power_opts.k_bin_width
                     Pk_kmin = 2.0 * np.pi / self.boxsize / 2.0
                     if mode == '1d':
-                        if id1 == id2:
+                        if calc_auto_spectra and (id1 == id2):
                             Pkresult = FFTPower(first=self.G[id1],
                                                 mode=mode,
                                                 dk=Pk_dk,
                                                 kmin=Pk_kmin)
-                        else:
+                        elif calc_cross_spectra and (id1 != id2):
                             Pkresult = FFTPower(first=self.G[id1],
                                                 second=self.G[id2],
                                                 mode=mode,
                                                 dk=Pk_dk,
                                                 kmin=Pk_kmin)
+                        else:
+                            Pkresult = None
+                            continue
+
                     elif mode == '2d':
                         assert line_of_sight is not None
-                        if id1 == id2:
+                        if calc_auto_spectra and (id1 == id2):
                             Pkresult = FFTPower(first=self.G[id1],
                                                 mode=mode,
                                                 dk=Pk_dk,
@@ -1051,7 +1057,7 @@ class ComplexGrid(Grid):
                                                 poles=power_opts.RSD_poles,
                                                 Nmu=power_opts.RSD_Nmu,
                                                 los=power_opts.RSD_los)
-                        else:
+                        elif calc_cross_spectra and (id1 != id2):
                             Pkresult = FFTPower(first=self.G[id1],
                                                 second=self.G[id2],
                                                 mode=mode,
@@ -1060,6 +1066,9 @@ class ComplexGrid(Grid):
                                                 poles=power_opts.RSD_poles,
                                                 Nmu=power_opts.RSD_Nmu,
                                                 los=power_opts.RSD_los)
+                        else:
+                            Pkresult = None
+                            continue
 
                     # print info
                     if verbose:
