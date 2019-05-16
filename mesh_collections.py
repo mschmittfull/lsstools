@@ -1504,6 +1504,7 @@ class ComplexGrid(Grid):
                                         absk) * val
                             elif interp_kind == 'manual_Pk_k_mu_bins':
 
+                                RSD_los = power_opts.RSD_los
                                 def to_add_filter(k3vec, val):
                                     absk = (sum(ki**2 for ki in k3vec)
                                            )**0.5  # absk on the mesh

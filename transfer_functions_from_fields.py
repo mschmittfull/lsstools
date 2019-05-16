@@ -1,16 +1,14 @@
 from __future__ import print_function, division
 
-import numpy as np
-from scipy import interpolate as interp
 from collections import OrderedDict
 import copy
+import numpy as np
+from scipy import interpolate as interp
 import sys
 
-from nbodykit.source.mesh.field import FieldMesh
-
-# MS packages
-import transfer_functions
 import interpolation_utils
+from nbodykit.source.mesh.field import FieldMesh
+import transfer_functions
 
 
 def generate_sources_and_get_interp_filters_minimizing_sqerror(
@@ -271,11 +269,11 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                 Pkmeas = gridk.calc_all_power_spectra(
                     columns=tmp_cols,
                     Pk_ptcle2grid_deconvolution=Pk_ptcle2grid_deconvolution,
-                    k_bin_width=k_bin_width,
-                    mode=Pk_1d_2d_mode,
-                    poles=RSD_poles,
-                    Nmu=RSD_Nmu,
-                    line_of_sight=RSD_los,
+                    k_bin_width=power_opts.k_bin_width,
+                    mode=power_opts.Pk_1d_2d_mode,
+                    poles=power_opts.RSD_poles,
+                    Nmu=power_opts.RSD_Nmu,
+                    line_of_sight=power_opts.RSD_los,
                     Pkmeas=Pkmeas)
 
             # First orthogonalize the target_contris among themselves using Gram-Schmidt/Cholesky (assumed in maths).
@@ -367,18 +365,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                             gridk.Ngrid,
                             'boxsize':
                             gridk.boxsize,
-                            'k_bin_width':
-                            k_bin_width,
-                            'Pk_1d_2d_mode':
-                            Pk_1d_2d_mode,
-                            'RSD_poles':
-                            RSD_poles,
-                            'RSD_Nmu':
-                            RSD_Nmu,
-                            'RSD_los':
-                            RSD_los,
-                            'Pk_ptcle2grid_deconvolution':
-                            Pk_ptcle2grid_deconvolution
+                            'power_opts': power_opts
                         })
                 else:
                     raise Exception('not implemented')
@@ -763,7 +750,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                         ki**2 for ki in k3vec))  # absk on the mesh
                     return interp_tuple_osources[counter](absk) * val
             elif power_opts.Pk_1d_2d_mode == '2d':
-
+                RSD_los = power_opts.RSD_los
                 def multiply_me(k3vec, val, counter=counter):
                     absk = (sum(ki**2 for ki in k3vec))**0.5  # absk on the mesh
                     # Dont use absk[absk==0]=1 b/c interp does not allow k=1.
