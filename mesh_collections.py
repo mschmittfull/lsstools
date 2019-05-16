@@ -1013,6 +1013,7 @@ class ComplexGrid(Grid):
         if power_opts.Pk_ptcle2grid_deconvolution is not None:
             raise Exception("Not implemented")
         mode = power_opts.Pk_1d_2d_mode
+        line_of_sight = power_opts.RSD_los
         for id1 in columns:
             for id2 in columns:
                 if (not self.has_column(id1)) or (not self.has_column(id2)):
