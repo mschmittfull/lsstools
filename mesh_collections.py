@@ -24,6 +24,8 @@ so we can easily apply actions on many MeshSource objects.
 
 Note: We store the same instances, so modifying meshsource elsewhere will change
 the data stored here. We recommend deleting meshsource always after storing it here.
+
+TODO: Rename to MeshSourceDict.
 """
 
 
