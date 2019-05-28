@@ -17,7 +17,7 @@ To install this in a new anaconda environment, use for example
 .. code-block:: bash
 
   $ cd ~/anaconda/anaconda/envs
-  $ conda create -n nbodykit-0.3.7-env -c bccp -c astropy python=2.7 nbodykit=0.3.7 bigfile  pmesh ujson
+  $ conda create -n nbodykit-0.3.7-env -c bccp -c astropy python=2.7 nbodykit=0.3.7 bigfile pmesh ujson
 
 Newer versions of nbodykit should also work but are not tested. 
 
