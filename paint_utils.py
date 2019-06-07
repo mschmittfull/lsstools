@@ -17,7 +17,7 @@ from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
 
-from nbkit03_utils import get_cstat
+from nbkit03_utils import get_cmean, get_cstat, print_cstats
 from pm_utils import ltoc_index_arr, cgetitem_index_arr
 
 
@@ -750,6 +750,9 @@ def weighted_paint_cat_to_delta(cat,
     if weighted_paint_mode not in ['sum', 'avg']:
         raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
 
+    if (normalize == True) and (weight is not None):
+        raise Exception('Do not use normalize with weights -- normalize yourself.')
+
     assert 'value' not in to_mesh_kwargs.keys()
 
     # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute
@@ -776,14 +779,9 @@ def weighted_paint_cat_to_delta(cat,
 
     if verbose:
         comm = meshsource.comm
-        print("%d: outfield_weighted: min, mean, max, rms(x-1):" % comm.rank,
-              np.min(outfield), np.mean(outfield), np.max(outfield),
-              np.mean((outfield - 1.)**2)**0.5)
+        print_cstats(outfield, prefix='outfield tmp: ', comm=comm)
         if weighted_paint_mode == 'avg':
-            print("%d: outfield_count: min, mean, max, rms(x-1):" % comm.rank,
-                  np.min(outfield_count), np.mean(outfield_count),
-                  np.max(outfield_count), np.mean(
-                      (outfield_count - 1.)**2)**0.5)
+            print_cstats(outfield_count, prefix='outfield count: ', comm=comm)
 
     # divide weighted 1+delta by number of contributions
     if weighted_paint_mode == 'avg':
@@ -795,12 +793,35 @@ def weighted_paint_cat_to_delta(cat,
         outfield = outfield - outfield.cmean() + set_mean
 
     if verbose:
-        # print some info:
-        print("%d: outfield weighted/count: min, mean, max, rms(x-1):" %
-              comm.rank, np.min(outfield), np.mean(outfield), np.max(outfield),
-              np.mean((outfield - 1.)**2)**0.5)
+        print_cstats(outfield, prefix='outfield final: ', comm=comm)
 
     return outfield, meshsource.attrs
+
+
+def mass_weighted_paint_cat_to_delta(cat,
+                                    weight=None,
+                                    Nmesh=None,
+                                    to_mesh_kwargs={
+                                        'window': 'cic',
+                                        'compensated': False,
+                                        'interlaced': False
+                                    },
+                                    verbose=True):
+    """Paint mass-weighted halo density to delta.
+    """
+    # get rho
+    delta, attrs = weighted_paint_cat_to_delta(cat,
+                                weight=weight,
+                                weighted_paint_mode='sum',
+                                normalize=False,
+                                Nmesh=Nmesh,
+                                to_mesh_kwargs=to_mesh_kwargs,
+                                set_mean=None,
+                                verbose=verbose)
+    delta /= get_cmean(delta)
+    delta -= get_cmean(delta)
+    print_cstats(delta, prefix='mass weighted delta: ')
+    return delta, attrs
 
 
 def convert_np_arrays_to_lists(indict):
