@@ -33,13 +33,13 @@ def get_cstat(data, statistic, comm=None):
         return comm.allreduce(data.max(), op=MPI.MAX)
     elif statistic == 'mean':
         # compute the mean
-        csum = comm.allreduce(data.sum())
-        csize = comm.allreduce(data.size)
-        return csum / csize
+        csum = comm.allreduce(data.sum(), op=MPI.SUM)
+        csize = comm.allreduce(data.size, op=MPI.SUM)
+        return csum / float(csize)
     elif statistic == 'rms':
         rsum = comm.allreduce((data**2).sum())
         csize = comm.allreduce(data.size)
-        rms = (rsum / csize)**0.5
+        rms = (rsum / float(csize))**0.5
         return rms
     else:
         raise Exception("Invalid statistic %s" % statistic)
@@ -97,6 +97,8 @@ def print_cstats(data, prefix="", logger=None, comm=None):
     cstats = get_cstats_string(data, comm)
     if comm.rank == 0:
         logger.info('%s%s' % (prefix, cstats))
+    print('%s%s' % (prefix, cstats))
+
 
 
 def interpolate_pm_rfield_to_catalog(rfield,

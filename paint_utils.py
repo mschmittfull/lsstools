@@ -743,20 +743,23 @@ def weighted_paint_cat_to_delta(cat,
     - weighted_paint_mode='avg': In each cell, sum up the weight of all particles in the cell
         and divide by the number of contributions. This does not increase if there are more
         particles in a cell with the same weight.
-    Note: In nbodykit nomenclature this is called 'value' instead of 'weight', but only implements
-        our 'sum' not 'avg' mode (it seems).
+
+    Note: 
+    In nbodykit nomenclature this is called 'value' instead of 'weight', but only implements our 'sum' not 'avg' mode (it seems).
+
+    Note:
+    mass_weighted_paint_cat_to_delta below is a bit cleaner so better use that.
     """
 
     if weighted_paint_mode not in ['sum', 'avg']:
         raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
 
-    if (normalize == True) and (weight is not None):
-        raise Exception('Do not use normalize with weights -- normalize yourself.')
+    #if (normalize == True) and (weight is not None):
+    #    raise Exception('Do not use normalize with weights -- normalize yourself.')
 
     assert 'value' not in to_mesh_kwargs.keys()
 
-    # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute
-    # equally. Later we divide by number of contributions.
+    # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute equally. Later we divide by number of contributions.
     if weight is not None:
         meshsource = cat.to_mesh(Nmesh=Nmesh, value=weight, **to_mesh_kwargs)
     else:
@@ -818,9 +821,17 @@ def mass_weighted_paint_cat_to_delta(cat,
                                 to_mesh_kwargs=to_mesh_kwargs,
                                 set_mean=None,
                                 verbose=verbose)
-    delta /= get_cmean(delta)
+    cmean = get_cmean(delta)
+    #cmean = delta.cmean()
+    print('mean0:', cmean)
+    if np.abs(cmean<1e-5):
+        print('WARNING: dividing by small number when dividing by mean')
+    delta /= cmean
+    print('mean1:', get_cmean(delta))
     delta -= get_cmean(delta)
+    print('mean2:', get_cmean(delta))
     print_cstats(delta, prefix='mass weighted delta: ')
+    raise Exception('dbg')
     return delta, attrs
 
 
