@@ -162,8 +162,8 @@ def get_rfield_from_bigfilemesh_file(in_fname,
                                      normalize=True,
                                      set_mean=0.0):
     """
-    Read mesh from bigfile. Paint it to get pmesh RealField object. Optionally, linearly rescale
-    to desired redshift.
+    Read mesh from bigfile. Paint it to get pmesh RealField object. Optionally, 
+    linearly rescale to desired redshift.
 
     normalize : boolean
         Normalize the field to set mean == 1. Applied before anything else.
@@ -383,6 +383,8 @@ def calc_quadratic_field(
     Return the calculated (Ngrid,Ngrid,Ngrid) field as a FieldMesh object.
 
     """
+    comm = CurrentMPIComm.get()
+
     # apply smoothing
     if smoothing_of_base_field is not None:
         base_field_mesh = apply_smoothing(mesh_source=base_field_mesh,
