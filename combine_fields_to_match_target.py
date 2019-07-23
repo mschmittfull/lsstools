@@ -40,6 +40,9 @@ def paint_combine_and_calc_power(trf_specs,
     only_exec_trf_specs_subset : None or list
         None: Execute all trf specs.
         List: Execute only trf specs in the list.
+
+    TODOOO: refactor this so we can easily compute model error field
+    for invbias.
     """
 
     # init some things
