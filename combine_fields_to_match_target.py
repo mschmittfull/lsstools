@@ -412,6 +412,14 @@ def paint_combine_and_calc_power(trf_specs,
                 mode='complex') -
                       gridk.G[trf_spec.target_field].compute(mode='complex')))
 
+        # save also in cache
+        cached_columns.append(residual_key)  #dtype.names
+        gridk.save_to_bigfile(gridk_cache_fname,
+                              [residual_key],
+                              new_dataset_for_each_column=True,
+                              overwrite_file_if_exists=False)
+
+
         Pkmeas = gridk.calc_all_power_spectra(
             columns=[residual_key],
             power_opts=power_opts,

@@ -84,7 +84,8 @@ class Grid(object):
             # read grid and store it in self.G
             self.init_grid_from_bigfile(fname,
                                         columns=read_columns,
-                                        mode='real')
+                                        #mode='real'
+                                        )
         else:
             # init from grid_array supplied as argument, which should be MeshSource object
             print("type of meshsource:", type(meshsource))
