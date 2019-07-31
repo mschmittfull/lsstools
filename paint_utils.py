@@ -831,7 +831,7 @@ def mass_weighted_paint_cat_to_delta(cat,
     delta -= get_cmean(delta)
     print('mean2:', get_cmean(delta))
     print_cstats(delta, prefix='mass weighted delta: ')
-    raise Exception('dbg')
+    #raise Exception('dbg')
     return delta, attrs
 
 

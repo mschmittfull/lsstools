@@ -345,6 +345,7 @@ def paint_combine_and_calc_power(trf_specs,
         print("tmp_cols:", tmp_cols)
         #raise Exception("mytmp")
 
+        # load all needed densities from cache
         gridk.append_columns_from_bigfile(gridk_cache_fname,
                                           tmp_cols,
                                           replace_existing_col=True)

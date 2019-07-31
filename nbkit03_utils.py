@@ -634,6 +634,15 @@ def shift_catalog_by_psi_grid(cat=None,
                               displacement_units='Mpc/h',
                               boxsize=None,
                               verbose=False):
+    """
+    Changes cat in-place.
+
+    If in_displacement_rfields is None, do not shift.
+    """
+
+    if in_displacement_rfields is None:
+        # Keep catalog unchanged
+        return
 
     assert type(in_displacement_rfields) in [tuple, list]
     assert len(in_displacement_rfields) == 3
