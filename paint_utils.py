@@ -751,6 +751,8 @@ def weighted_paint_cat_to_delta(cat,
     mass_weighted_paint_cat_to_delta below is a bit cleaner so better use that.
     """
 
+    print('MYDBG to_mesh_kwargs:', to_mesh_kwargs)
+
     if weighted_paint_mode not in ['sum', 'avg']:
         raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
 
@@ -759,7 +761,7 @@ def weighted_paint_cat_to_delta(cat,
 
     assert 'value' not in to_mesh_kwargs.keys()
 
-    # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute equally. Later we divide by number of contributions.
+    # We want to sum up weight. Use value not weight for this b/c each ptlce should contribute equally. Later we divide by number of contributions if mode='avg'.
     if weight is not None:
         meshsource = cat.to_mesh(Nmesh=Nmesh, value=weight, **to_mesh_kwargs)
     else:
@@ -770,15 +772,33 @@ def weighted_paint_cat_to_delta(cat,
     # get outfield = 1+delta
     #outfield = meshsource.paint(mode='real')
     # Paint. If normalize=True, outfield = 1+delta; if normalize=False: outfield=rho
-    outfield = meshsource.to_real_field(normalize=normalize)
+    if to_mesh_kwargs.get('compensated', False):
+        # have to use compute to compensate window; to_real_field does not compensate.
+        if normalize:
+            # compute 1+delta, compensate window
+            outfield = meshsource.compute()
+        else:
+            raise Exception('Not implemented: compensated and not normalized')
+    else:
+        # no window compensation
+        outfield = meshsource.to_real_field(normalize=normalize)
+
 
     if weighted_paint_mode == 'avg':
         # count contributions per cell (no value or weight).
         # outfield_count = 1+delta_unweighted = number of contributions per cell
         # (or rho_unweighted if normalize=False)
         #outfield_count = cat.to_mesh(Nmesh=Nmesh, **to_mesh_kwargs).paint(mode='real')
-        outfield_count = cat.to_mesh(
-            Nmesh=Nmesh, **to_mesh_kwargs).to_real_field(normalize=normalize)
+        if to_mesh_kwargs.get('compensated', False):
+            if normalize:
+                # compensate window
+                outfield_count = cat.to_mesh(
+                Nmesh=Nmesh, **to_mesh_kwargs).compute()
+            else:
+                raise Exception('Not implemented: compensated and not normalized')
+        else:
+            outfield_count = cat.to_mesh(
+                Nmesh=Nmesh, **to_mesh_kwargs).to_real_field(normalize=normalize)
 
     if verbose:
         comm = meshsource.comm
@@ -809,6 +829,7 @@ def mass_weighted_paint_cat_to_delta(cat,
                                         'compensated': False,
                                         'interlaced': False
                                     },
+                                    set_mean=0,
                                     verbose=True):
     """Paint mass-weighted halo density to delta.
     """
@@ -829,6 +850,7 @@ def mass_weighted_paint_cat_to_delta(cat,
     delta /= cmean
     print('mean1:', get_cmean(delta))
     delta -= get_cmean(delta)
+    delta += set_mean
     print('mean2:', get_cmean(delta))
     print_cstats(delta, prefix='mass weighted delta: ')
     #raise Exception('dbg')

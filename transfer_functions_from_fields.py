@@ -749,6 +749,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
                     absk = np.sqrt(sum(
                         ki**2 for ki in k3vec))  # absk on the mesh
                     return interp_tuple_osources[counter](absk) * val
+                    
             elif power_opts.Pk_1d_2d_mode == '2d':
                 RSD_los = power_opts.RSD_los
                 def multiply_me(k3vec, val, counter=counter):

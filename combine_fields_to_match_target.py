@@ -28,6 +28,8 @@ def paint_combine_and_calc_power(trf_specs,
                                  grid_opts,
                                  sim_opts,
                                  power_opts,
+                                 kgrids_in_memory=None,
+                                 xgrids_in_memory=None,
                                  save_grids4plots=False,
                                  grids4plots_R=None,
                                  Pkmeas_helper_columns=None,
@@ -256,6 +258,18 @@ def paint_combine_and_calc_power(trf_specs,
         else:
             raise Exception("Iinvalid file_format: %s" %
                             str(ext_grid_id['file_format']))
+
+
+        # grids in memory
+        if kgrids_in_memory is not None:
+            for grid_id, field in kgrids_in_memory.items():
+                gridk.append_column(grid_id, field)
+
+        if xgrids_in_memory is not None:
+            for grid_id, field in xgrids_in_memory.items():
+                gridx.append_column(grid_id, field)
+                gridk.append_column(grid_id,
+                                    gridx.fft_x2k(grid_id, drop_column=True))
 
         # ######################################################################
         # Cache grid to disk, drop from memory, and reload below
