@@ -7,6 +7,7 @@ import h5py
 
 from nbodykit.lab import *
 from nbodykit.source.catalog import HDFCatalog
+from nbodykit import CurrentMPIComm
 
 from lsstools.nbkit03_utils import get_cmean, get_cstats_string
 
@@ -20,27 +21,33 @@ def main():
     ####
     # OPTIONS
     ####
-    Nmesh_lst = [64, 128]
+    Nmesh_lst = [64,128,512]
    
     if False:
         # Illustris-3
         # https://www.illustris-project.org/data/downloads/Illustris-3/
         fname = '/data/mschmittfull/lss/IllustrisTNG/Illustris-3/output/snap_ics.hdf5'
         
-    if True:
+    else:
         # TNG300-1 / L205n2500TNG
         fname = '/data/mschmittfull/lss/IllustrisTNG/L205n2500TNG/output/snap_ics.hdf5'
 
     ####
     # Run code
     ####
+
+    comm = CurrentMPIComm.get()
+    print('Greetings from rank %d' % comm.rank)
+
     for Nmesh in Nmesh_lst:
 
-        print('Reading %s' % fname)
+        if comm.rank==0:
+            print('Reading header from %s' % fname)
 
         # Read header
         f = h5py.File(fname, 'r')
-        print('header: ', f['Header'].attrs.keys())
+        if comm.rank == 0:
+            print('header: ', f['Header'].attrs.keys())
 
         attrs = dict(
             Redshift = f['Header'].attrs[u'Redshift'],
@@ -55,31 +62,41 @@ def main():
             TotNumPart     = f['Header'].attrs[u'NumPart_Total']
         )
 
-        print('attrs:')
-        print(attrs)
+        if comm.rank==0:
+            print('attrs:')
+            print(attrs)
 
         f.close()
 
         # read particles positions
+        if comm.rank==0:
+            print('Reading particle data from %s' % fname)
+
         cat = HDFCatalog(fname, exclude=['PartType1/ParticleIDs', 'PartType1/Velocities'],
                        attrs=attrs)
-        print('columns: ', cat.columns)
+        if comm.rank==0:
+            print('columns: ', cat.columns)
 
         # convert kpc/h to Mpc/h
         cat['Position'] = cat['PartType1/Coordinates'] / 1e3
 
-        print('paint...')
+        if comm.rank==0:
+            print('paint...')
         catmesh = cat.to_mesh(Nmesh=Nmesh,
                               window='cic', compensated=False, interlaced=False
                               )
         rfield = catmesh.compute() 
-        print('density stats: %s' % get_cstats_string(rfield))
+        stats = get_cstats_string(rfield)
+        if comm.rank==0:
+            print('density stats: %s' % stats)
 
         # save to bigfile
         out_fname = '%s_PtcleDensity_z%d_Ng%d' % (fname, int(catmesh.attrs['Redshift']), Nmesh)
-        print('Writing to %s' % out_fname)
+        if comm.rank==0:
+            print('Writing to %s' % out_fname)
         catmesh.save(out_fname)
-        print('Wrote %s' % out_fname)
+        if comm.rank==0:
+            print('Wrote %s' % out_fname)
 
 if __name__ == '__main__':
     main()
