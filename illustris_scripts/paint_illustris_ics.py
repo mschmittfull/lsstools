@@ -85,10 +85,13 @@ def main():
         catmesh = cat.to_mesh(Nmesh=Nmesh,
                               window='cic', compensated=False, interlaced=False
                               )
-        rfield = catmesh.compute() 
-        stats = get_cstats_string(rfield)
-        if comm.rank==0:
-            print('density stats: %s' % stats)
+
+        if False:
+            # crashes when using too many cores (empty arrays)
+            rfield = catmesh.compute() 
+            stats = get_cstats_string(rfield)
+            if comm.rank==0:
+                print('density stats: %s' % stats)
 
         # save to bigfile
         out_fname = '%s_PtcleDensity_z%d_Ng%d' % (fname, int(catmesh.attrs['Redshift']), Nmesh)
