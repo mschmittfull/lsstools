@@ -33,10 +33,10 @@ class IllustrisTNGSimOpts(SimOpts):
 
     def get_default_ext_grids_to_load(self,
                                       Ngrid,
-                                      include_shifted_fields=False,
+                                      include_shifted_fields=True,
                                       shifted_fields_RPsi=0.23,
-                                      shifted_fields_Np=1536,
-                                      shifted_fields_Nmesh=1536,
+                                      shifted_fields_Np=2500,
+                                      shifted_fields_Nmesh=2500,
                                       RSDstrings=None):
         """See parent class.
         """
