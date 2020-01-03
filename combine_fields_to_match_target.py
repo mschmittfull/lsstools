@@ -188,6 +188,8 @@ def paint_combine_and_calc_power(trf_specs,
         if ext_grid_spec.has_key('additional_rescale_factor'):
             rescalefac *= ext_grid_spec['additional_rescale_factor']
 
+        print('Rescalefac for %s: %g' % (ext_grid_id, rescalefac))
+
         # default args for painting
         default_paint_kwargs = {
             'gridx': gridx,
