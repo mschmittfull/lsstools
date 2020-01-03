@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
-#SBATCH -t 06:00:00
-#SBATCH --nodes=8
+#SBATCH -t 12:00:00
+#SBATCH --nodes=16
 # memory per node, up to 120gb on helios
 #SBATCH --mem=120GB
 #SBATCH --export=ALL
@@ -21,7 +21,7 @@ export OMP_NUM_THREADS=1
 
 # each helios noise has dual 14-core processors (so 28 cores per node?) and 128GB per node
 conda activate nbodykit-0.3.7-env
-srun -n 224 python /home/mschmittfull/CODE/lsstools/illustris_scripts/paint_illustris_ics.py
+srun -n 448 python /home/mschmittfull/CODE/lsstools/illustris_scripts/paint_illustris_ics.py
 conda deactivate
 
             

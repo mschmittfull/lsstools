@@ -21,7 +21,7 @@ def main():
     ####
     # OPTIONS
     ####
-    Nmesh_lst = [64,128,512]
+    Nmesh_lst = [2500]
    
     if False:
         # Illustris-3
