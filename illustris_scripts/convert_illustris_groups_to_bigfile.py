@@ -34,8 +34,8 @@ def main():
               'SubhaloVelDisp',
               'SubhaloStellarPhotometrics']
 
-    snapNum = 1
-    #snapNum = 67
+    #snapNum = 1
+    snapNum = 33
 
     # read group catalog
     print('Reading snap %d group catalog from %s' % (snapNum, basePath))

@@ -390,7 +390,7 @@ def calc_quadratic_field(
         base_field_mesh = apply_smoothing(mesh_source=base_field_mesh,
                                           **smoothing_of_base_field)
 
-    # compute quadratic field
+    # compute quadratic (or cubic) field
     if quadfield == 'growth':
         out_rfield = base_field_mesh.compute(mode='real')**2
 
@@ -516,6 +516,106 @@ def calc_quadratic_field(
             base_field_mesh=base_field_mesh,
             smoothing_of_base_field=smoothing_of_base_field,
             verbose=verbose).compute(mode='real')
+
+    elif quadfield == 'G2_delta':
+        # Get G2[delta] * delta
+        out_rfield = (
+            base_field_mesh.compute(mode='real')
+            * calc_quadratic_field(
+                quadfield='tidal_G2',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose).compute(mode='real'))
+
+        # take out the mean (already close to 0 but still subtract)
+        mymean = out_rfield.cmean()
+        if comm.rank == 0:
+            print('Subtract mean of G2*delta: %g' % mymean)
+        out_rfield -= mymean 
+
+
+    elif quadfield == 'tidal_G3':
+        # Get G3[delta]
+
+        # Have 3/2 G2 delta = 3/2 (p1.p2)^2/(p1^2 p2^2) - 3/2
+        # so
+        # G3 = 3/2 G2 delta + 1 - (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
+
+        # Compute 1 * delta^3(\vx)
+        out_rfield = base_field_mesh.compute(mode='real')**3
+
+        # Add 3/2 delta * G2[delta]
+        out_rfield += (3./2. 
+            * base_field_mesh.compute(mode='real')
+            * calc_quadratic_field(
+                quadfield='tidal_G2',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose).compute(mode='real'))
+
+        # Compute ppp = (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
+        # = k.q k.p q.p / (k^2 q^2 p^2)
+        # = k_i q_i k_j p_j q_l p_l / (k^2 q^2 p^2)
+        # = sum_ijl d_ij(k) d_il(q) d_jl(p)
+        # where we denoted p1=k, p2=q, p3=p.
+
+        # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
+        # d_ij = k_ik_j/k^2*basefield(\vk).
+        dij_x_dict = {}
+        for idir in range(3):
+            for jdir in range(idir, 3):
+
+                def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                    kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                    kk[kk == 0] = 1
+                    return k3vec[idir] * k3vec[jdir] * val / kk
+
+                dij_k = base_field_mesh.apply(my_transfer_function,
+                                              mode='complex',
+                                              kind='wavenumber')
+                del my_transfer_function
+                # do fft and convert field_mesh to RealField object
+                dij_x = dij_k.compute(mode='real')
+                del dij_k
+
+                if verbose:
+                    rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+                dij_x_dict[(idir,jdir)] = dij_x
+                del dij_x
+
+        # get j<i by symmetry
+        def get_dij_x(idir, jdir):
+            if jdir>=idir:
+                return dij_x_dict[(idir,jdir)]
+            else:
+                return dij_x_dict[(jdir,idir)]
+
+        # Compute - sum_ijl d_ij(k) d_il(q) d_jl(p)
+        for idir in range(3):
+            for jdir in range(3):
+                for ldir in range(3):
+                    out_rfield -= (
+                          get_dij_x(idir,jdir)
+                        * get_dij_x(idir,ldir)
+                        * get_dij_x(jdir,ldir) )
+
+        # take out the mean (already close to 0 but still subtract)
+        mymean = out_rfield.cmean()
+        if comm.rank == 0:
+            print('Subtract mean of G3: %g' % mymean)
+        out_rfield -= mymean 
+
+        if verbose:
+            rfield_print_info(out_rfield, comm, 'G3: ')
+
+
+    elif quadfield == 'Gamma3':
+        # Get Gamma3[delta]
+
+        # Have Gamma3 = 
+
+        raise Exception('implement Gamma3')
 
     else:
         raise Exception("quadfield %s not implemented" % str(quadfield))
