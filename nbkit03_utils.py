@@ -351,6 +351,7 @@ def apply_smoothing(mesh_source=None,
 
 def calc_quadratic_field(
         base_field_mesh=None,
+        second_base_field_mesh=None,
         quadfield=None,
         smoothing_of_base_field=None,
         #return_in_k_space=False,
@@ -362,7 +363,11 @@ def calc_quadratic_field(
     Parameters
     ----------
     base_field_mesh : MeshSource object, typically a FieldMesh object
-        Input field that will be squared
+        Input field that will be squared.
+
+    second_base_field_mesh : MeshSource object, typically a FieldMesh object
+        Use this to multiply two fields, e.g. delta1*delta2 or G2[delta1,delta2].
+        Only implemented for tidal_G2 at the moment.
 
     quadfield : string
         Represents quadratic field to be calculated. Can be
@@ -384,6 +389,12 @@ def calc_quadratic_field(
 
     """
     comm = CurrentMPIComm.get()
+
+    if second_base_field_mesh is not None:
+        if quadfield != 'tidal_G2':
+            raise Exception(
+                'second_base_field_mesh not implemented for quadfield %s' 
+                % quadfield)
 
     # apply smoothing
     if smoothing_of_base_field is not None:
@@ -407,36 +418,85 @@ def calc_quadratic_field(
     elif quadfield == 'tidal_G2':
         # Get G2[delta] = d_ijd_ij - delta^2
 
-        # Compute -delta^2(\vx)
-        out_rfield = -base_field_mesh.compute(mode='real')**2
+        if second_base_field_mesh is None:
 
-        # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
-        # d_ij = k_ik_j/k^2*basefield(\vk).
-        for idir in range(3):
-            for jdir in range(idir, 3):
+            # Compute -delta^2(\vx)
+            out_rfield = -base_field_mesh.compute(mode='real')**2
 
-                def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
-                    kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
-                    kk[kk == 0] = 1
-                    return k3vec[idir] * k3vec[jdir] * val / kk
+            # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
+            # d_ij = k_ik_j/k^2*basefield(\vk).
+            for idir in range(3):
+                for jdir in range(idir, 3):
 
-                dij_k = base_field_mesh.apply(my_transfer_function,
-                                              mode='complex',
-                                              kind='wavenumber')
-                del my_transfer_function
-                # do fft and convert field_mesh to RealField object
-                dij_x = dij_k.compute(mode='real')
-                if verbose:
-                    rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+                    def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                        kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                        kk[kk == 0] = 1
+                        return k3vec[idir] * k3vec[jdir] * val / kk
 
-                # Add \sum_{i,j=0..2} d_ij(\vx)d_ij(\vx)
-                #   = [d_00^2+d_11^2+d_22^2 + 2*(d_01^2+d_02^2+d_12^2)]
-                if jdir == idir:
-                    fac = 1.0
-                else:
-                    fac = 2.0
-                out_rfield += fac * dij_x**2
-                del dij_x, dij_k
+                    dij_k = base_field_mesh.apply(my_transfer_function,
+                                                  mode='complex',
+                                                  kind='wavenumber')
+                    del my_transfer_function
+                    # do fft and convert field_mesh to RealField object
+                    dij_x = dij_k.compute(mode='real')
+                    if verbose:
+                        rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+                    # Add \sum_{i,j=0..2} d_ij(\vx)d_ij(\vx)
+                    #   = [d_00^2+d_11^2+d_22^2 + 2*(d_01^2+d_02^2+d_12^2)]
+                    if jdir == idir:
+                        fac = 1.0
+                    else:
+                        fac = 2.0
+                    out_rfield += fac * dij_x**2
+                    del dij_x, dij_k
+
+        else:
+            # use second_base_field_mesh
+            # Compute -delta1*delta2(\vx)
+            out_rfield = -(
+                base_field_mesh.compute(mode='real')
+                * second_base_field_mesh.compute(mode='real') )
+
+            # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
+            # d_ij = k_ik_j/k^2*basefield(\vk).
+            for idir in range(3):
+                for jdir in range(idir, 3):
+
+                    def my_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                        kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                        kk[kk == 0] = 1
+                        return k3vec[idir] * k3vec[jdir] * val / kk
+
+                    dij_k = base_field_mesh.apply(
+                        my_transfer_function,
+                        mode='complex',
+                        kind='wavenumber')
+                    second_dij_k = second_base_field_mesh.apply(
+                        my_transfer_function,
+                        mode='complex',
+                        kind='wavenumber')
+                    del my_transfer_function
+                    
+                    # do fft and convert field_mesh to RealField object
+                    dij_x = dij_k.compute(mode='real')
+                    second_dij_x = second_dij_k.compute(mode='real')
+                    if verbose:
+                        rfield_print_info(
+                            dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+                        rfield_print_info(
+                            second_dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+                    # Add \sum_{i,j=0..2} d_ij(\vx)d_ij(\vx)
+                    #   = [d_00^2+d_11^2+d_22^2 + 2*(d_01^2+d_02^2+d_12^2)]
+                    if jdir == idir:
+                        fac = 1.0
+                    else:
+                        fac = 2.0
+                    out_rfield += fac * dij_x * second_dij_x
+
+                    del dij_x, dij_k, second_dij_x, second_dij_k
+
 
     elif quadfield == 'tidal_s2':
         # Get s^2 = 3/2*d_ijd_ij - delta^2/2
@@ -611,11 +671,20 @@ def calc_quadratic_field(
 
 
     elif quadfield == 'Gamma3':
-        # Get Gamma3[delta]
+        # Get Gamma3[delta] = -4/7 * G2[G2[delta,delta],delta]
 
-        # Have Gamma3 = 
+        tmp_G2 = calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
 
-        raise Exception('implement Gamma3')
+        out_rfield = -4./7. * calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            second_base_field_mesh=tmp_G2,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose).compute(mode='real')
 
     else:
         raise Exception("quadfield %s not implemented" % str(quadfield))
