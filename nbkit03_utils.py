@@ -599,7 +599,7 @@ def calc_quadratic_field(
 
         # Have 3/2 G2 delta = 3/2 (p1.p2)^2/(p1^2 p2^2) - 3/2
         # so
-        # G3 = 3/2 G2 delta + 1 - (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
+        # G3 = 3/2 G2 delta + delta^3 - (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
 
         # Compute 1 * delta^3(\vx)
         out_rfield = base_field_mesh.compute(mode='real')**3
