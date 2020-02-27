@@ -33,6 +33,7 @@ def paint_combine_and_calc_power(trf_specs,
                                  save_grids4plots=False,
                                  grids4plots_R=None,
                                  Pkmeas_helper_columns=None,
+                                 Pkmeas_helper_columns_calc_crosses=False,
                                  delete_cache=True,
                                  only_exec_trf_specs_subset=None,
                                  calc_power_of_ext_grids=False):
@@ -489,7 +490,7 @@ def paint_combine_and_calc_power(trf_specs,
     Pkmeas = gridk.calc_all_power_spectra(
         columns=cols_Pk,
         power_opts=power_opts,
-        calc_cross_spectra=False,
+        calc_cross_spectra=Pkmeas_helper_columns_calc_crosses,
         Pkmeas=Pkmeas)
     print("Computed helper Pkmeas for cols_Pk:\n", cols_Pk)
     print("All Pkmeas cols:", Pkmeas.keys())

@@ -224,6 +224,54 @@ class MSGadgetSimOpts(SimOpts):
                     'nbkit_setMean': 0.0
                 }
 
+                # G2*deltalin shifted by deltalin_Zeldovich displacement (using 
+                # nbkit0.3)
+                ext_grids['deltalin_G2_delta_SHIFTEDBY_%sdeltalin%s' % (
+                    psi_type_str, RSDstring)] = {
+                    'dir':
+                    'IC_LinearMesh_G2_delta_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                       RSDstring),
+                    'file_format': 'nbkit_BigFileGrid',
+                    'dataset_name': 'Field',
+                    'scale_factor': self.sim_scale_factor,
+                    'nbkit_normalize': True,
+                    'nbkit_setMean': 0.0
+                }
+
+                # G3 shifted by deltalin_Zeldovich displacement (using 
+                # nbkit0.3)
+                ext_grids['deltalin_G3_SHIFTEDBY_%sdeltalin%s' % (
+                    psi_type_str, RSDstring)] = {
+                    'dir':
+                    'IC_LinearMesh_tidal_G3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                       RSDstring),
+                    'file_format': 'nbkit_BigFileGrid',
+                    'dataset_name': 'Field',
+                    'scale_factor': self.sim_scale_factor,
+                    'nbkit_normalize': True,
+                    'nbkit_setMean': 0.0
+                }
+
+                # Gamma3 shifted by deltalin_Zeldovich displacement (using 
+                # nbkit0.3)
+                ext_grids['deltalin_Gamma3_SHIFTEDBY_%sdeltalin%s' % (
+                    psi_type_str, RSDstring)] = {
+                    'dir':
+                    'IC_LinearMesh_Gamma3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                       RSDstring),
+                    'file_format': 'nbkit_BigFileGrid',
+                    'dataset_name': 'Field',
+                    'scale_factor': self.sim_scale_factor,
+                    'nbkit_normalize': True,
+                    'nbkit_setMean': 0.0
+                }
+
         return ext_grids
 
     def get_default_catalogs(self, RSDstrings=None):
