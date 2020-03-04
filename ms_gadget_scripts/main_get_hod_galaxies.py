@@ -26,7 +26,7 @@ def main():
 
     ns = ap.parse_args()
 
-    halos = HaloCatalog(ns.fof_halos_mvir)
+    cat = BigFileCatalog(ns.fof_halos_mvir)
 
     if cat.comm.rank == 0:
         print('BoxSize', halos.attrs['BoxSize'])
