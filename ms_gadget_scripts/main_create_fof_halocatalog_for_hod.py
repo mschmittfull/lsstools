@@ -80,7 +80,7 @@ def main():
     out_fname = ns.fof + '/ll_{0:.3f}_nmin{1}_mvir'.format(ns.ll, ns.nmin+1)
     halos.save(out_fname)
 
-    if cat.comm.rank == 0:
+    if fof.comm.rank == 0:
         print('Saved HaloCatalog to %s' % out_fname)
 
    

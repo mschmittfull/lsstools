@@ -36,7 +36,7 @@ indir="/scratch/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/sn
 outdir="/data/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/nbkit_fof_$simsnap"
 
 
-conda activate nbodykit-0.3-env
+conda activate nbodykit-0.3.7-env
 
 srun -n 448 python main_create_fof_halocatalog_for_hod.py $indir 0.2 $outdir --nmin $nminptcles
             
