@@ -38,8 +38,8 @@ def main():
     cat = BigFileCatalog(ns.treepm, header='Header', dataset='1/')
 
     cat.attrs['BoxSize']  = np.ones(3) * cat.attrs['BoxSize'][0]
-    cat.attrs['Nmesh'] = 512
-
+    cat.attrs['Nmesh']  = np.ones(3) * 512.0    # in TreePM catalog, there is no 'NC' attribute
+    
     cosmo = Planck15.match(Omega0_m=cat.attrs['Omega0'])
     # In TreePM, we need to use 'Omega0' instead of 'OmegaM' in FastPM.
     # csize is the total number of particles
