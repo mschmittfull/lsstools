@@ -37,6 +37,8 @@ def main():
 
     cat = BigFileCatalog(ns.treepm, header='Header', dataset='1/')
 
+
+
     cat.attrs['BoxSize']  = np.ones(3) * cat.attrs['BoxSize'][0]
     cat.attrs['Nmesh']  = np.ones(3) * 512.0    # in TreePM catalog, there is no 'NC' attribute
     
@@ -50,6 +52,7 @@ def main():
         print('BoxSize', cat.attrs['BoxSize'])
         print('Mass of a particle', M0)
         print('OmegaM', cosmo.Om0)
+        print('attrs', cat.attrs.keys())
         print('Redshift', cat.attrs['Redshift'])
 
     # Halos which have more than nmin particles are selected.
