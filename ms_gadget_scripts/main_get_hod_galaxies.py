@@ -80,10 +80,6 @@ def main():
     # Save the halo catalog to disk so can easily load it later to populate
     # galaxies with hod.
     out_fname = ns.fof + '/ll_{0:.3f}_nmin{1}_mvir'.format(ns.ll, ns.nmin+1)
-
-    # MS: Somehow crashes b/c some ranks don't see header file. running
-    # a second time works though. maybe write header first with 
-    # single rank?
     halos.save(out_fname, halos.columns)
 
     if fof.comm.rank == 0:

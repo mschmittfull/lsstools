@@ -25,7 +25,7 @@ export OMP_NUM_THREADS=2
 # (use half of allocated processors below so we can use 2 threads)
 
 
-simseed=400
+simseed=404
 simsnap=0.6250
 # use 24 to cut at 25
 nminptcles=24
