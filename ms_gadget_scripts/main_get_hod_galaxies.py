@@ -19,7 +19,7 @@ def main():
     setup_logging()
 
     ap = ArgumentParser()
-    ap.add_argument('fof_halos_mvir', 
+    ap.add_argument('--fof_halos_mvir', 
         help=('Directory of halo catalog with mvir Mass, e.g.'
             '/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'),
         default='/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/')
