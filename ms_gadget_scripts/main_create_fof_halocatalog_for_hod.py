@@ -48,12 +48,14 @@ def main():
     M0 = (cat.attrs['Omega0'][0] * 27.75 * 1e10 * cat.attrs['BoxSize'].prod() 
             / cat.csize)
 
+    redshift = 1.0/cat.attrs['Time'][0]-1.0
+
     if cat.comm.rank == 0:
         print('BoxSize', cat.attrs['BoxSize'])
         print('Mass of a particle', M0)
         print('OmegaM', cosmo.Om0)
         print('attrs', cat.attrs.keys())
-        print('Redshift', cat.attrs['Redshift'])
+        print('Redshift', redshift)
 
     # Halos which have more than nmin particles are selected.
     fof = FOF(cat, linking_length=ns.ll, nmin=ns.nmin)  
@@ -62,7 +64,7 @@ def main():
     # to get concentration needed for hod.
     halos = fof.to_halos(
         cosmo=cosmo, 
-        redshift=cat.attrs['Redshift'],
+        redshift=redshift,
         particle_mass=M0,
         mdef='vir')
 
@@ -78,7 +80,7 @@ def main():
     # Save the halo catalog to disk so can easily load it later to populate
     # galaxies with hod.
     out_fname = ns.fof + '/ll_{0:.3f}_nmin{1}_mvir'.format(ns.ll, ns.nmin+1)
-    halos.save(out_fname)
+    halos.save(out_fname, halos.columns)
 
     if cat.comm.rank == 0:
         print('Saved HaloCatalog to %s' % out_fname)
