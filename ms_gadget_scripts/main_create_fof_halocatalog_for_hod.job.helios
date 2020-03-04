@@ -1,0 +1,44 @@
+#!/bin/bash -l
+
+# # required time of job
+#SBATCH -t 04:00:00
+# # number of processors (helios has 28 cores per node; 896 is half cluster)
+#SBATCH -n 560
+#SBATCH --mem=120GB
+#SBATCH --export=ALL
+#SBATCH -V
+#SBATCH --mail-user=mschmittfull@gmail.com
+#SBATCH --mail-type=ALL
+#SBATCH --output=slurm-%x.o%j
+#SBATCH --error=slurm-%x.e%j
+#SBATCH -J fof
+# #SBATCH --dependency=afterany:52925
+
+set -x
+
+module load helios
+module load openmpi/1.10.7_gcc-4.8.5
+module load gsl/gcc-4.8.5/2.4
+
+export MPICH_GNI_MBOXES_PER_BLOCK=4096
+export OMP_NUM_THREADS=2
+# (use half of allocated processors below so we can use 2 threads)
+
+
+simseed=400
+simsnap=0.6250
+# use 24 to cut at 25
+nminptcles=24
+
+
+
+indir="/scratch/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/snap_$simsnap"
+outdir="/data/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/nbkit_fof_$simsnap"
+
+
+conda activate nbodykit-0.3-env
+
+srun -n 448 python main_ms_gadget_fof_halofinder_nbkit0.3.py $indir 0.2 $outdir --nmin $nminptcles
+            
+conda deactivate                
+
