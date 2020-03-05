@@ -13,6 +13,7 @@ from nbodykit.lab import KDDensity
 from argparse import ArgumentParser
 from nbodykit.cosmology import Planck15
 from nbodykit import setup_logging
+from nbodykit.hod import Zheng07Model
 
 
 def main():
@@ -25,13 +26,28 @@ def main():
     ap.add_argument('--fof_halos_mvir', 
         help=('Directory of halo catalog with mvir Mass, e.g.'
             '/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'),
-        default='/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/')
+        #default='/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'
+        default='/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'
+        )
 
-    ns = ap.parse_args()
+    args = ap.parse_args()
+    cat = BigFileCatalog(args.fof_halos_mvir)
+    galcat = run_hod(cat)
 
-    cat = BigFileCatalog(ns.fof_halos_mvir)
 
 
+def run_hod(cat, hod_model_name='Zheng07_HandSeljak17', hod_seed=42,
+    add_RSD=False, RSD_LOS=None):
+    """
+    Run HOD to get galaxy catalog from input halo catalog.
+
+    Parameters
+    ----------
+    cat : nbodykit Catalog object
+        Input halo catalog, should use virial mass as 'Mass' column.
+    """
+    if cat.comm.rank == 0:
+        print('Run HOD model %s' % hod_model_name)
     cat.attrs['BoxSize']  = np.ones(3) * cat.attrs['BoxSize'][0]
     cat.attrs['Nmesh']  = np.ones(3) * 512.0    # in TreePM catalog, there is no 'NC' attribute
     
@@ -49,44 +65,52 @@ def main():
         print('BoxSize', halos.attrs['BoxSize'])
         print('attrs', halos.attrs.keys())
 
-    # run hod
-    #halotools_halos = halos.to_halotools()
-    from nbodykit.hod import Zheng07Model
-    hodmodel = Zheng07Model.to_halotools(cosmo=cosmo, redshift=redshift, mdef='vir')
-    if cat.comm.rank == 0:
-        print('zheng07model default:', hodmodel.param_dict)
+    # Define HOD
+    if hod_model_name == 'Zheng07_HandSeljak17':
 
-    # (1) Hand & Seljak 1706.02362:  
-    # Uses {log10 Mmin, sigma log10 M, log10 M1, alpha, log10 Mcut} = {12.99, 0.308, 14.08, 0.824, 13.20}.
-    # See Reid et al https://arxiv.org/pdf/1404.3742.pdf eq 17-19
+        # (1) Hand & Seljak 1706.02362:  
+        # Uses {log10 Mmin, sigma log10 M, log10 M1, alpha, log10 Mcut} = {12.99, 0.308, 14.08, 0.824, 13.20}.
+        # See Reid et al https://arxiv.org/pdf/1404.3742.pdf eq 17-19
 
-    # (2) halotools docs on zheng07 model:
-    #  See https://halotools.readthedocs.io/en/stable/quickstart_and_tutorials/tutorials/model_building/preloaded_models/zheng07_composite_model.html#zheng07-parameters):
-    # logMmin - Minimum mass required for a halo to host a central galaxy.
-    # sigma_logM - Rate of transition from <Ncen>=0 -> <Ncen=1>.
-    # alpha - Power law slope of the relation between halo mass and <Nsat>.
-    # logM0 - Low-mass cutoff in <Nsat>.
-    # logM1 - Characteristic halo mass where <Nsat> begins to assume a power law form.
+        # (2) halotools docs on zheng07 model:
+        #  See https://halotools.readthedocs.io/en/stable/quickstart_and_tutorials/tutorials/model_building/preloaded_models/zheng07_composite_model.html#zheng07-parameters):
+        # logMmin - Minimum mass required for a halo to host a central galaxy.
+        # sigma_logM - Rate of transition from <Ncen>=0 -> <Ncen=1>.
+        # alpha - Power law slope of the relation between halo mass and <Nsat>.
+        # logM0 - Low-mass cutoff in <Nsat>.
+        # logM1 - Characteristic halo mass where <Nsat> begins to assume a power law form.
 
-    # HOD parameters from Hand & Seljak 1706.02362
-    hodmodel.param_dict['logMmin'] = 12.99
-    hodmodel.param_dict['sigma_logM'] = 0.308
-    hodmodel.param_dict['logM1'] = 14.08
-    hodmodel.param_dict['alpha'] = 1.06
-    hodmodel.param_dict['logM0'] = 13.20 # this is called Mcut in Hand et al and Reid et al.
+        hodmodel = Zheng07Model.to_halotools(cosmo=cosmo, redshift=redshift, mdef='vir')
 
-    if cat.comm.rank == 0:
-        print('Use zheng07model with:', hodmodel.param_dict)
+        # HOD parameters from Hand & Seljak 1706.02362
+        hodmodel.param_dict['logMmin'] = 12.99
+        hodmodel.param_dict['sigma_logM'] = 0.308
+        hodmodel.param_dict['logM1'] = 14.08
+        hodmodel.param_dict['alpha'] = 1.06
+        hodmodel.param_dict['logM0'] = 13.20 # this is called Mcut in Hand et al and Reid et al.
 
-    galcat = halos.populate(hodmodel, seed=41)
-    #hod = HODCatalog(halotools_halos)
+        if cat.comm.rank == 0:
+            print('Use zheng07model with:', hodmodel.param_dict)
 
-    #galcat.repopulate(alpha=0.9, logMmin=13.5, seed=42)
+    else:
+        raise Exception('Unknown hod_model %s' % hod_model)
 
+    # Run HOD
+    galcat = halos.populate(hodmodel, seed=hod_seed)
+
+    if add_RSD:
+        assert type(RSD_LOS)==np.ndarray
+        assert RSD_LOS.shape==(3,)
+        galcat['RSDPosition'] = (
+            galcat['Position'] + galcat['VelocityOffset'] * RSD_LOS)
 
     if cat.comm.rank == 0:
         print('galcat', galcat)
+        print('attrs', galcat.attrs)
+        print('columns', galcat.columns)
+        print('fsat', galcat.attrs['fsat'])
 
+    return galcat
    
 if __name__ == '__main__':
     main()
