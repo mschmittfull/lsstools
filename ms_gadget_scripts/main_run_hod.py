@@ -46,6 +46,7 @@ def main():
     RSD_LOS = np.array([1,0,0])
 
     # load input halo catalog
+    print('Read halos from %s' % args.fof_halos_mvir) 
     cat = BigFileCatalog(args.fof_halos_mvir)
 
     # run hod to get galaxy catalog
