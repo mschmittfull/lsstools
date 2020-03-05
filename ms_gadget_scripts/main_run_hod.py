@@ -43,7 +43,7 @@ def main():
         default='Zheng07_HandSeljak17')
 
     args = ap.parse_args()
-    RSD_LOS = np.array([1,0,0])
+    RSD_LOS = np.array([0,0,1])
 
     # load input halo catalog
     print('Read halos from %s' % args.fof_halos_mvir) 
@@ -60,8 +60,8 @@ def main():
     out_fname = os.path.join(args.fof_halos_mvir, 
         'HOD_%s' % args.HOD_model_name)
     if args.RSD:
-        assert np.all(RSD_LOS == np.array([1,0,0]))
-        out_fname += '_RSD100'
+        assert np.all(RSD_LOS == np.array([0,0,1]))
+        out_fname += '_RSD001'
     out_fname += '.hdf5'
 
     save_galcat_to_hdf5(galcat, out_fname=out_fname)
