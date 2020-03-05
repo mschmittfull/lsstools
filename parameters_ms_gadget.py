@@ -38,6 +38,7 @@ class MSGadgetSimOpts(SimOpts):
         default['f_log_growth'] = None
         # halo mass
         default['halo_mass_string'] = '13.8_15.1'
+        default['hod_model_name'] = 'Zheng07_HandSeljak17'
 
         # cosmology
         # omega_m = 0.307494
@@ -281,6 +282,7 @@ class MSGadgetSimOpts(SimOpts):
         if RSDstrings is None:
             RSDstrings = ['']
 
+        # FOF halos, mass given by number of particles in halo
         halo_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25' % (
             self.sim_scale_factor)
 
@@ -345,5 +347,25 @@ class MSGadgetSimOpts(SimOpts):
                     'weight_ptcles_by':
                     None
                 }
+
+
+        # FOF halos, virial mass (used for HOD)
+        hod_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25_mvir' % (
+            self.sim_scale_factor)
+
+        for RSDstring in RSDstrings:
+            
+            ## nonuniform catalogs without ptcle masses
+            if True:
+                # HOD galaxies
+                cats['delta_g%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/HOD_%s%s.hdf5" %
+                    (hod_dir, self.hod_model_name, RSDstr),
+                    'weight_ptcles_by':
+                    None
+                }
+
+
 
         return cats
