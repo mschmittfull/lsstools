@@ -63,7 +63,7 @@ def main():
     # Compute halo catalog. Mass column contains virial mass, which is needed
     # to get concentration needed for hod.
     halos = fof.to_halos(
-        cosmo=cosmo, 
+        cosmo=cosmo,
         redshift=redshift,
         particle_mass=M0,
         mdef='vir')
