@@ -19,6 +19,10 @@ from nbodykit.hod import Zheng07Model
 def main():
     """ 
     Script to compute HOD galaxies from FOF halo catalog with mvir.
+
+    For batch runs, use e.g.
+
+    for SEED in {0..4}; do python main_run_hod.py --fof_halos_mvir "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/" --RSD 0; done
     """
     setup_logging()
 
