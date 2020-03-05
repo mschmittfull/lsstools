@@ -293,7 +293,7 @@ class MSGadgetSimOpts(SimOpts):
                 RSDfilestr = '%s.hdf5' % RSDstring
 
             ## nonuniform catalogs without ptcle masses
-            if True:
+            if False:
                 # halos without mass weight, narrow mass cuts: 10.8..11.8..12.8
                 # ..13.8..15.1
                 cats['delta_h%s' % RSDstring] = {
@@ -361,7 +361,7 @@ class MSGadgetSimOpts(SimOpts):
                 cats['delta_g%s' % RSDstring] = {
                     'in_fname':
                     "%s/HOD_%s%s.hdf5" %
-                    (hod_dir, self.hod_model_name, RSDstr),
+                    (hod_dir, self.hod_model_name, RSDstring),
                     'weight_ptcles_by':
                     None
                 }
