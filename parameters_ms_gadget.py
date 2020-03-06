@@ -358,13 +358,35 @@ class MSGadgetSimOpts(SimOpts):
             ## nonuniform catalogs without ptcle masses
             if True:
                 # HOD galaxies
+                hod_model_name = self.hod_model_name
                 cats['delta_g%s' % RSDstring] = {
                     'in_fname':
                     "%s/HOD_%s%s.hdf5" %
-                    (hod_dir, self.hod_model_name, RSDstring),
+                    (hod_dir, hod_model_name, RSDstring),
                     'weight_ptcles_by':
                     None
                 }
+
+                # HOD central galaxies
+                hod_model_name = self.hod_model_name + '_centrals'
+                cats['delta_gc%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/HOD_%s%s.hdf5" %
+                    (hod_dir, hod_model_name, RSDstring),
+                    'weight_ptcles_by':
+                    None
+                }
+
+                # HOD parent halos of centrals
+                hod_model_name = self.hod_model_name + '_parent_halos'
+                cats['delta_gp%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/HOD_%s%s.hdf5" %
+                    (hod_dir, hod_model_name, RSDstring),
+                    'weight_ptcles_by':
+                    None
+                }
+
 
 
 
