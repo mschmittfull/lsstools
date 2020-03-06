@@ -377,6 +377,16 @@ class MSGadgetSimOpts(SimOpts):
                     None
                 }
 
+                # HOD satellite galaxies
+                hod_model_name = self.hod_model_name + '_sats'
+                cats['delta_gs%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/HOD_%s%s.hdf5" %
+                    (hod_dir, hod_model_name, RSDstring),
+                    'weight_ptcles_by':
+                    None
+                }
+
                 # HOD parent halos of centrals
                 hod_model_name = self.hod_model_name + '_parent_halos'
                 cats['delta_gp%s' % RSDstring] = {

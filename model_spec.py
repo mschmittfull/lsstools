@@ -120,3 +120,23 @@ def check_trf_specs_consistency(trf_specs):
         raise Exception("Found duplicate save_bestfit_field: %str" %
                         str(Counter(save_bestfit_fields)))
 
+
+def get_trf_spec_from_list(trf_specs=None, save_bestfit_field=None):
+    """
+    From list of trf_specs, return the one where save_bestfit_field
+    is the one specified by the argument.
+    
+    Parameters
+    ----------
+    trf_specs : list of TrfSpec objects
+        List of TrfSpec objects to search.
+    
+    save_bestfit_field : str
+        Find the object that has this save_bestfit_field.
+    """
+    save_bestfit_fields = [tf.save_bestfit_field for tf in trf_specs]
+    if save_bestfit_fields.count(save_bestfit_field) != 1:
+        raise Exception('Could not find trf_spec %s' % save_bestfit_field)
+    idx = save_bestfit_fields.index(save_bestfit_field)
+    return trf_specs[idx]
+
