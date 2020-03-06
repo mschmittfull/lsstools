@@ -1,0 +1,40 @@
+#!/bin/bash -l
+
+# # required time of job
+#SBATCH -t 01:00:00
+#SBATCH -n 1
+# #SBATCH --mem=120GB
+#SBATCH --export=ALL
+#SBATCH -V
+#SBATCH --mail-user=mschmittfull@gmail.com
+#SBATCH --mail-type=ALL
+#SBATCH --output=slurm-%x.o%j
+#SBATCH --error=slurm-%x.e%j
+#SBATCH -J hod
+#SBATCH --exclusive
+# #SBATCH --dependency=afterok:7655459
+
+set -x
+
+module load helios
+module load openmpi/1.10.7_gcc-4.8.5
+module load gsl/gcc-4.8.5/2.4
+
+export MPICH_GNI_MBOXES_PER_BLOCK=4096
+# was 2
+export OMP_NUM_THREADS=2
+# (can use half of allocated processors below so we can use 2 threads)
+
+RSD=0
+HOD="Zheng07_HandSeljak17_centrals"
+
+conda activate nbodykit-0.3.7-env
+
+#for SimSeed in 400 401 402 403 404
+for SimSeed in 400
+do
+    python main_run_hod.py --HOD_model_name=$HOD --RSD=$RSD --fof_halos_mvir="/data/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/"
+done
+        
+conda deactivate                
+

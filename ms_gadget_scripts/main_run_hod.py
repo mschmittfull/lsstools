@@ -99,7 +99,11 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
         print('attrs', halos.attrs.keys())
 
     # Define HOD
-    if HOD_model_name == 'Zheng07_HandSeljak17':
+    if HOD_model_name in [
+        'Zheng07_HandSeljak17',
+        'Zheng07_HandSeljak17_centrals',
+        'Zheng07_HandSeljak17_sats',
+        'Zheng07_HandSeljak17_parent_halos']:
 
         # (1) Hand & Seljak 1706.02362:  
         # Uses {log10 Mmin, sigma log10 M, log10 M1, alpha, log10 Mcut} = {12.99, 0.308, 14.08, 0.824, 13.20}.
@@ -125,11 +129,56 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
         if cat.comm.rank == 0:
             print('Use zheng07model with:', hodmodel.param_dict)
 
+        # Run HOD
+        galcat = halos.populate(hodmodel, seed=hod_seed)
+
+        # select which galaxies to keep
+        if HOD_model_name == 'Zheng07_HandSeljak17':
+            # keep all
+            pass
+
+        elif HOD_model_name == 'Zheng07_HandSeljak17_centrals':
+            # select only centrals
+            ww = galcat['gal_type'] == 0  # 0: central, 1: satellite
+            galcat = galcat[ww]
+
+        elif HOD_model_name == 'Zheng07_HandSeljak17_sats':
+            # select only satellites
+            ww = galcat['gal_type'] == 1  # 0: central, 1: satellite
+            galcat = galcat[ww]
+
+        elif HOD_model_name == 'Zheng07_HandSeljak17_parent_halos':
+            # select centrals
+            ww = galcat['gal_type'] == 0  # 0: central, 1: satellite
+            galcat = galcat[ww]
+
+            # set position to that of parent halo (in Mpc/h)
+            halo_pos = galcat['Position'].compute() + np.nan
+            halo_pos[:,0] = galcat['halo_x'].compute()
+            halo_pos[:,1] = galcat['halo_y'].compute()
+            halo_pos[:,2] = galcat['halo_z'].compute()
+            galcat['Position'] = halo_pos
+            del halo_pos
+
+            # set velocity to that of parent halo (in km/s)
+            halo_vel = galcat['Velocity'].compute() + np.nan
+            halo_vel[:,0] = galcat['halo_vx'].compute()
+            halo_vel[:,1] = galcat['halo_vy'].compute()
+            halo_vel[:,2] = galcat['halo_vz'].compute()
+            galcat['Velocity'] = halo_vel
+            del halo_vel
+
+            # Get RSD displacement = v_z/(aH(a)), where v_z is halo velocity.
+            # Compute rsd_factor = 1/(aH(a)) = (1+z)/H(z)
+            # see https://nbodykit.readthedocs.io/en/latest/catalogs/common-operations.html#Adding-Redshift-space-Distortions
+            rsd_factor = (1.+redshift) / (100. * cosmo.efunc(redshift))
+            galcat['VelocityOffset'] = rsd_factor * galcat['Velocity']
+
+            # columns: ['Position', 'Selection', 'Value', 'Velocity', 'VelocityOffset', 'Weight', 'conc_NFWmodel', 'gal_type', 'halo_hostid', 'halo_id', 'halo_mvir', 'halo_num_centrals', 'halo_num_satellites', 'halo_rvir', 'halo_upid', 'halo_vx', 'halo_vy', 'halo_vz', 'halo_x', 'halo_y', 'halo_z', 'host_centric_distance', 'vx', 'vy', 'vz', 'x', 'y', 'z']
+
     else:
         raise Exception('Unknown hod_model %s' % HOD_model_name)
 
-    # Run HOD
-    galcat = halos.populate(hodmodel, seed=hod_seed)
 
     if add_RSD:
         assert type(RSD_LOS)==np.ndarray
