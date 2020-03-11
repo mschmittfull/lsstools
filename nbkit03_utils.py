@@ -749,33 +749,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
 
         Psi_component_rfield = pot_k.apply(force_transfer_function).c2r()
 
-        if Psi_type in ['2LPT', '-2LPT']:
-
-            # add 2nd order Psi on top of Zeldovich
-
-            # compute G2
-            G2_cfield = calc_quadratic_field(
-                base_rfield=in_density_rfield,
-                quadfield='tidal_G2',
-                smoothing_of_base_field=smoothing).compute(mode='complex')
-
-            # compute Psi_2ndorder = -3/14 ik/k^2 G2(k). checked sign: improves rcc with deltaNL
-            # if we use -3/14, but get worse rcc when using +3/14.
-            Psi_2ndorder_rfield = -3. / 14. * (
-                G2_cfield.apply(potential_transfer_function).apply(
-                    force_transfer_function).c2r())
-
-            if Psi_type == '-2LPT':
-                # this is just to test sign
-                Psi_2ndorder_rfield *= -1.0
-
-            # add 2nd order to Zeldoivhc displacement
-            Psi_component_rfield += Psi_2ndorder_rfield
-
         if RSD:
-
-            # Add RSD displacement f (\e_LOS.\vecPsi(q)) \e_LOS.
-
+            # Add linear RSD displacement f (\e_LOS.\vecPsi^(1)(q)) \e_LOS.
             assert RSD_f_log_growth is not None
             if RSD_line_of_sight in [[0, 0, 1], [0, 1, 0], [1, 0, 0]]:
                 # If [0,0,1] simply shift by Psi_z along z axis. Similarly in the other cases.
@@ -792,6 +767,53 @@ def get_displacement_from_density_rfield(in_density_rfield,
                 # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
                 raise Exception('RSD_line_of_sight %s not implemented' %
                                 str(RSD_line_of_sight))
+
+
+        if Psi_type in ['2LPT', '-2LPT']:
+
+            # add 2nd order Psi on top of Zeldovich
+
+            # compute G2
+            G2_cfield = calc_quadratic_field(
+                base_field_mesh=FieldMesh(in_density_rfield),
+                quadfield='tidal_G2',
+                smoothing_of_base_field=smoothing).compute(mode='complex')
+
+            # compute Psi_2ndorder = -3/14 ik/k^2 G2(k). checked sign: improves rcc with deltaNL
+            # if we use -3/14, but get worse rcc when using +3/14.
+            Psi_2ndorder_rfield = -3. / 14. * (
+                G2_cfield.apply(potential_transfer_function).apply(
+                    force_transfer_function).c2r())
+
+            if Psi_type == '-2LPT':
+                # this is just to test sign
+                Psi_2ndorder_rfield *= -1.0
+
+
+            if RSD:
+                # Add 2nd order RSD displacement 2*f*(\e_LOS.\vecPsi^(2)(q)) \e_LOS.
+                # Notice factor of 2 b/c \dot\psi enters for RSD.
+                if RSD_line_of_sight in [[0, 0, 1], [0, 1, 0], [1, 0, 0]]:
+                    # If [0,0,1] simply shift by Psi_z along z axis. Similarly in the other cases.
+                    if RSD_line_of_sight[component] == 0:
+                        # nothing to do in this direction
+                        pass
+                    elif RSD_line_of_sight[component] == 1:
+                        # add 2 f Psi^{(2)}_component(q)
+                        Psi_2ndorder_rfield += (
+                            2.0 * RSD_f_log_growth * Psi_2ndorder_rfield)
+                        if comm.rank == 0:
+                            print('%d: Added 2nd order RSD in direction %d' %
+                                  (comm.rank, component))
+                else:
+                    # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
+                    raise Exception('RSD_line_of_sight %s not implemented' %
+                                    str(RSD_line_of_sight))
+
+
+            # add 2nd order to Zeldoivhc displacement
+            Psi_component_rfield += Psi_2ndorder_rfield
+
 
     return Psi_component_rfield
 
