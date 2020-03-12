@@ -136,53 +136,19 @@ class MSGadgetSimOpts(SimOpts):
         if include_shifted_fields:
 
             ## Shifted fields
-            #for psi_type_str in ['','Psi2LPT_']:
-            psi_type_str = ''
+            #psi_type_str = ''
+            for psi_type_str in ['','Psi2LPT_']:
+        
 
-            for RSDstring in RSDstrings:
+                for RSDstring in RSDstrings:
 
-                # 1 shifted by deltalin_Zeldovich displacement (using nbkit0.3;
-                # same as delta_ZA)
-                ext_grids['1_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring
-                )] = {
-                    'dir':
-                    '1_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
-
-                # deltalin shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring
-                )] = {
-                    'dir':
-                    'IC_LinearMesh_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
-
-                # deltalin^2 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids[
-                    'deltalin_growth-mean_SHIFTEDBY_%sdeltalin%s' % (
+                    # 1 shifted by deltalin_Zeldovich displacement (using nbkit0.3;
+                    # same as delta_ZA)
+                    ext_grids['1_SHIFTEDBY_%sdeltalin%s' % (
                         psi_type_str, RSDstring
                     )] = {
                         'dir':
-                        'IC_LinearMesh_growth-mean_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        '1_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                         % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                            shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
                            RSDstring),
@@ -193,85 +159,120 @@ class MSGadgetSimOpts(SimOpts):
                         'nbkit_setMean': 0.0
                     }
 
-                # G2[deltalin] shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_G2_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring)] = {
-                    'dir':
-                    'IC_LinearMesh_tidal_G2_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+                    # deltalin shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring
+                    )] = {
+                        'dir':
+                        'IC_LinearMesh_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
 
-                # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring)] = {
-                    'dir':
-                    'IC_LinearMesh_cube-mean_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+                    # deltalin^2 shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids[
+                        'deltalin_growth-mean_SHIFTEDBY_%sdeltalin%s' % (
+                            psi_type_str, RSDstring
+                        )] = {
+                            'dir':
+                            'IC_LinearMesh_growth-mean_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                            % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                               shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                               RSDstring),
+                            'file_format': 'nbkit_BigFileGrid',
+                            'dataset_name': 'Field',
+                            'scale_factor': self.sim_scale_factor,
+                            'nbkit_normalize': True,
+                            'nbkit_setMean': 0.0
+                        }
 
-                # G2*deltalin shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_G2_delta_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring)] = {
-                    'dir':
-                    'IC_LinearMesh_G2_delta_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+                    # G2[deltalin] shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_G2_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring)] = {
+                        'dir':
+                        'IC_LinearMesh_tidal_G2_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
 
-                # G3 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_G3_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring)] = {
-                    'dir':
-                    'IC_LinearMesh_tidal_G3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+                    # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring)] = {
+                        'dir':
+                        'IC_LinearMesh_cube-mean_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
 
-                # Gamma3 shifted by deltalin_Zeldovich displacement (using 
-                # nbkit0.3)
-                ext_grids['deltalin_Gamma3_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring)] = {
-                    'dir':
-                    'IC_LinearMesh_Gamma3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
-                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
-                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
-                    'file_format': 'nbkit_BigFileGrid',
-                    'dataset_name': 'Field',
-                    'scale_factor': self.sim_scale_factor,
-                    'nbkit_normalize': True,
-                    'nbkit_setMean': 0.0
-                }
+                    # G2*deltalin shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_G2_delta_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring)] = {
+                        'dir':
+                        'IC_LinearMesh_G2_delta_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
+
+                    # G3 shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_G3_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring)] = {
+                        'dir':
+                        'IC_LinearMesh_tidal_G3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
+
+                    # Gamma3 shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    ext_grids['deltalin_Gamma3_SHIFTEDBY_%sdeltalin%s' % (
+                        psi_type_str, RSDstring)] = {
+                        'dir':
+                        'IC_LinearMesh_Gamma3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                        % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                           shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                           RSDstring),
+                        'file_format': 'nbkit_BigFileGrid',
+                        'dataset_name': 'Field',
+                        'scale_factor': self.sim_scale_factor,
+                        'nbkit_normalize': True,
+                        'nbkit_setMean': 0.0
+                    }
 
         return ext_grids
 
