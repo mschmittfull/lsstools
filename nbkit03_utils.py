@@ -696,6 +696,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                          component=None,
                                          Psi_type=None,
                                          smoothing=None,
+                                         smoothing_Psi3LPT=None,
                                          RSD=False,
                                          RSD_line_of_sight=None,
                                          RSD_f_log_growth=None):
@@ -716,7 +717,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
         Line of sight direction, e.g. [0,0,1] for z axis.
     """
     assert (component in [0, 1, 2])
-    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT']
+    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT']
 
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
@@ -724,7 +725,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
     # copy so we don't do any in-place changes by accident
     density_rfield = in_density_rfield.copy()
 
-    if Psi_type in ['Zeldovich', '2LPT', '-2LPT']:
+    if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT']:
 
         # get zeldovich displacement in direction given by component
 
@@ -769,7 +770,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                 str(RSD_line_of_sight))
 
 
-        if Psi_type in ['2LPT', '-2LPT']:
+        if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT']:
 
             # add 2nd order Psi on top of Zeldovich
 
@@ -784,6 +785,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
             Psi_2ndorder_rfield = -3. / 14. * (
                 G2_cfield.apply(potential_transfer_function).apply(
                     force_transfer_function).c2r())
+            del G2_cfield
 
             if Psi_type == '-2LPT':
                 # this is just to test sign
@@ -810,9 +812,47 @@ def get_displacement_from_density_rfield(in_density_rfield,
                     raise Exception('RSD_line_of_sight %s not implemented' %
                                     str(RSD_line_of_sight))
 
-
             # add 2nd order to Zeldoivhc displacement
             Psi_component_rfield += Psi_2ndorder_rfield
+            del Psi_2ndorder_rfield
+
+
+        if Psi_type in ['3LPT', '-3LPT']:
+
+            # add 3nd order Psi on top of Zeldovich
+
+            # compute G3
+            G3_cfield = calc_quadratic_field(
+                base_field_mesh=FieldMesh(in_density_rfield),
+                quadfield='tidal_G3',
+                smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+
+            Psi_3rdorder_rfield = 1./9. * (
+                G3_cfield.apply(potential_transfer_function).apply(
+                    force_transfer_function).c2r())
+            del G3_cfield
+
+            # add Gamma3
+            Gamma3_cfield = calc_quadratic_field(
+                base_field_mesh=FieldMesh(in_density_rfield),
+                quadfield='Gamma3',
+                smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+
+            Psi_3rdorder_rfield -= -5./24. * (
+                Gamma3_cfield.apply(potential_transfer_function).apply(
+                    force_transfer_function).c2r())
+            del Gamma3_cfield
+
+            if Psi_type == '-3LPT':
+                # this is just to test sign
+                Psi_3rdorder_rfield *= -1.0
+
+            if RSD:
+                raise Exception('todo')
+
+            # add 3rd order to displacement
+            Psi_component_rfield += Psi_3rdorder_rfield
+            del Psi_3rdorder_rfield
 
 
     return Psi_component_rfield
