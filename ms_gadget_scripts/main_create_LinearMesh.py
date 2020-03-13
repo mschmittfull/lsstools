@@ -1,21 +1,4 @@
-#!/home/mschmittfull/anaconda2/envs/nbodykit-0.3-env/bin/python
-
-# NOTE: We load nbodykit-0.3 environment above, so can call with ./main_test_nbkit0.3py.
-# Better: Use run.sh script.
-
-# Should make sure that PYTHONPATH="".
-
-# Run with
-#   ./main_test_nbkit0.3.py
-# or
-#   ./run.sh main_test_nbkit0.3py
-# but NOT with
-#   python main_test_nbkit0.3.py
-
-
 # Marcel Schmittfull 2018 (mschmittfull@gmail.com)
-
-
 from __future__ import print_function,division
 
 from nbodykit.lab import *
@@ -50,12 +33,12 @@ def main():
     
     ### OPTIONS
     boxsize = 500.0
-    Nptcles_per_dim_for_out_dir = 1536 #1536
-    Plin_fname = '/home/mschmittfull/lssbisp2013/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_z0.dat'
+    Nptcles_per_dim_for_out_dir = 1536  # only used to get name of output folder
+    Plin_fname = '/home/mschmittfull/CODE/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_z0.dat'
     
 
     # Linear ICs
-    out_dir = '/scratch/mschmittfull/lssbisp2013/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
+    out_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
         sim_seed,Nptcles_per_dim_for_out_dir,boxsize)
     out_file = 'IC_LinearMesh_z0_Ng%d' % Ngrid_out
     out_fname = os.path.join(out_dir,out_file)
