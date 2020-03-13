@@ -770,11 +770,11 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                 str(RSD_line_of_sight))
 
 
-        if comm.rank == 0:
-            print('mean, rms, max Psi^{1}_%d: %g, %g, %g' % (
-                component, np.mean(Psi_component_rfield), 
-                np.mean(Psi_component_rfield**2)**0.5,
-                np.max(Psi_component_rfield)))
+        # if comm.rank == 0:
+        #     print('mean, rms, max Psi^{1}_%d: %g, %g, %g' % (
+        #         component, np.mean(Psi_component_rfield), 
+        #         np.mean(Psi_component_rfield**2)**0.5,
+        #         np.max(Psi_component_rfield)))
 
 
 
@@ -822,11 +822,11 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                     str(RSD_line_of_sight))
 
 
-            if comm.rank == 0:
-                print('mean, rms, max Psi^{2}_%d: %g, %g, %g' % (
-                    component, np.mean(Psi_2ndorder_rfield), 
-                    np.mean(Psi_2ndorder_rfield**2)**0.5,
-                    np.max(Psi_2ndorder_rfield)))
+            # if comm.rank == 0:
+            #     print('mean, rms, max Psi^{2}_%d: %g, %g, %g' % (
+            #         component, np.mean(Psi_2ndorder_rfield), 
+            #         np.mean(Psi_2ndorder_rfield**2)**0.5,
+            #         np.max(Psi_2ndorder_rfield)))
 
 
             # add 2nd order to Zeldoivhc displacement
@@ -883,11 +883,12 @@ def get_displacement_from_density_rfield(in_density_rfield,
                     # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
                     raise Exception('RSD_line_of_sight %s not implemented' %
                                     str(RSD_line_of_sight))
-            if comm.rank == 0:
-                print('mean, rms, max Psi^{3}_%d: %g, %g, %g' % (
-                    component, np.mean(Psi_3rdorder_rfield), 
-                    np.mean(Psi_3rdorder_rfield**2)**0.5,
-                    np.max(Psi_3rdorder_rfield)))
+
+            # if comm.rank == 0:
+            #     print('mean, rms, max Psi^{3}_%d: %g, %g, %g' % (
+            #         component, np.mean(Psi_3rdorder_rfield), 
+            #         np.mean(Psi_3rdorder_rfield**2)**0.5,
+            #         np.max(Psi_3rdorder_rfield)))
 
             # add 3rd order to displacement
             Psi_component_rfield += Psi_3rdorder_rfield
