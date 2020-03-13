@@ -770,6 +770,14 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                 str(RSD_line_of_sight))
 
 
+        if comm.rank == 0:
+            print('mean, rms, max Psi^{1}_%d: %g, %g, %g' % (
+                component, np.mean(Psi_component_rfield), 
+                np.mean(Psi_component_rfield**2)**0.5,
+                np.max(Psi_component_rfield)))
+
+
+
         if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT']:
 
             # add 2nd order Psi on top of Zeldovich
@@ -786,6 +794,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
                 G2_cfield.apply(potential_transfer_function).apply(
                     force_transfer_function).c2r())
             del G2_cfield
+
 
             if Psi_type == '-2LPT':
                 # this is just to test sign
@@ -811,6 +820,14 @@ def get_displacement_from_density_rfield(in_density_rfield,
                     # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
                     raise Exception('RSD_line_of_sight %s not implemented' %
                                     str(RSD_line_of_sight))
+
+
+            if comm.rank == 0:
+                print('mean, rms, max Psi^{2}_%d: %g, %g, %g' % (
+                    component, np.mean(Psi_2ndorder_rfield), 
+                    np.mean(Psi_2ndorder_rfield**2)**0.5,
+                    np.max(Psi_2ndorder_rfield)))
+
 
             # add 2nd order to Zeldoivhc displacement
             Psi_component_rfield += Psi_2ndorder_rfield
@@ -848,7 +865,29 @@ def get_displacement_from_density_rfield(in_density_rfield,
                 Psi_3rdorder_rfield *= -1.0
 
             if RSD:
-                raise Exception('todo')
+                # Add 3rd order RSD displacement 3*f*(\e_LOS.\vecPsi^(3)(q)) \e_LOS.
+                # Notice factor of 3 b/c \dot\psi enters for RSD.
+                if RSD_line_of_sight in [[0, 0, 1], [0, 1, 0], [1, 0, 0]]:
+                    # If [0,0,1] simply shift by Psi_z along z axis. Similarly in the other cases.
+                    if RSD_line_of_sight[component] == 0:
+                        # nothing to do in this direction
+                        pass
+                    elif RSD_line_of_sight[component] == 1:
+                        # add 3 f Psi^{(3)}_component(q)
+                        Psi_3rdorder_rfield += (
+                            3.0 * RSD_f_log_growth * Psi_3rdorder_rfield)
+                        if comm.rank == 0:
+                            print('%d: Added 3rd order RSD in direction %d' %
+                                  (comm.rank, component))
+                else:
+                    # Need to compute (\e_LOS.\vecPsi(q)) which requires all Psi components.
+                    raise Exception('RSD_line_of_sight %s not implemented' %
+                                    str(RSD_line_of_sight))
+            if comm.rank == 0:
+                print('mean, rms, max Psi^{3}_%d: %g, %g, %g' % (
+                    component, np.mean(Psi_3rdorder_rfield), 
+                    np.mean(Psi_3rdorder_rfield**2)**0.5,
+                    np.max(Psi_3rdorder_rfield)))
 
             # add 3rd order to displacement
             Psi_component_rfield += Psi_3rdorder_rfield
