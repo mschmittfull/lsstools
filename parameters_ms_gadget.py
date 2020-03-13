@@ -304,7 +304,7 @@ class MSGadgetSimOpts(SimOpts):
                 RSDfilestr = '%s.hdf5' % RSDstring
 
             ## nonuniform catalogs without ptcle masses
-            if False:
+            if True:
                 # halos without mass weight, narrow mass cuts: 10.8..11.8..12.8
                 # ..13.8..15.1
                 cats['delta_h%s' % RSDstring] = {
