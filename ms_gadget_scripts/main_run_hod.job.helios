@@ -25,15 +25,21 @@ export MPICH_GNI_MBOXES_PER_BLOCK=4096
 export OMP_NUM_THREADS=2
 # (can use half of allocated processors below so we can use 2 threads)
 
-RSD=0
-HOD="Zheng07_HandSeljak17_centrals"
+# params
+RSD=1
+HOD="Zheng07_HandSeljak17_parent_halos"
 
+
+# run
 conda activate nbodykit-0.3.7-env
 
-#for SimSeed in 400 401 402 403 404
-for SimSeed in 400
+for HOD in "Zheng07_HandSeljak17_centrals" "Zheng07_HandSeljak17_sats" "Zheng07_HandSeljak17_parent_halos"
 do
-    python main_run_hod.py --HOD_model_name=$HOD --RSD=$RSD --fof_halos_mvir="/data/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/"
+    echo "RUN WITH HOD $HOD"
+    for SimSeed in 400 401 402 403 404
+    do
+	python main_run_hod.py --HOD_model_name=$HOD --RSD=$RSD --fof_halos_mvir="/data/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/"
+    done
 done
         
 conda deactivate                
