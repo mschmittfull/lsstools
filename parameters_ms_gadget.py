@@ -61,6 +61,8 @@ class MSGadgetSimOpts(SimOpts):
                                       shifted_fields_RPsi=0.23,
                                       shifted_fields_Np=1536,
                                       shifted_fields_Nmesh=1536,
+                                      include_2LPT_shifted_fields=False,
+                                      include_3LPT_shifted_fields=False,
                                       RSDstrings=None):
         """See parent class.
         """
@@ -136,8 +138,13 @@ class MSGadgetSimOpts(SimOpts):
         if include_shifted_fields:
 
             ## Shifted fields
-            #psi_type_str = ''
-            for psi_type_str in ['','Psi2LPT_']:
+            psi_type_strings = ['']
+            if include_2LPT_shifted_fields:
+                psi_type_strings.append('Psi2LPT_')
+            if include_2LPT_shifted_fields:
+                psi_type_strings.append('Psi3LPT_')
+
+            for psi_type_str in psi_type_strings:
         
 
                 for RSDstring in RSDstrings:
@@ -228,7 +235,7 @@ class MSGadgetSimOpts(SimOpts):
 
                     if False:
                         # additional cubic fields
-                        
+
                         # G2*deltalin shifted by deltalin_Zeldovich displacement (using 
                         # nbkit0.3)
                         ext_grids['deltalin_G2_delta_SHIFTEDBY_%sdeltalin%s' % (
