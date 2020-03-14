@@ -141,7 +141,7 @@ class MSGadgetSimOpts(SimOpts):
             psi_type_strings = ['']
             if include_2LPT_shifted_fields:
                 psi_type_strings.append('Psi2LPT_')
-            if include_2LPT_shifted_fields:
+            if include_3LPT_shifted_fields:
                 psi_type_strings.append('Psi3LPT_')
 
             for psi_type_str in psi_type_strings:
