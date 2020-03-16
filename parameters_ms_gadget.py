@@ -63,7 +63,7 @@ class MSGadgetSimOpts(SimOpts):
                                       shifted_fields_Nmesh=1536,
                                       include_2LPT_shifted_fields=False,
                                       include_3LPT_shifted_fields=False,
-                                      include_-3LPT_shifted_fields=False,
+                                      include_minus_3LPT_shifted_fields=False,
                                       RSDstrings=None):
         """See parent class.
         """
@@ -145,7 +145,7 @@ class MSGadgetSimOpts(SimOpts):
             if include_3LPT_shifted_fields:
                 psi_type_strings.append('Psi3LPT_')
             if include_minus_3LPT_shifted_fields:
-                psi_type_strings.append('-Psi3LPT_')
+                psi_type_strings.append('Psi-3LPT_')
             
 
             for psi_type_str in psi_type_strings:
