@@ -686,10 +686,66 @@ def calc_quadratic_field(
             smoothing_of_base_field=smoothing_of_base_field,
             verbose=verbose).compute(mode='real')
 
+
+    elif quadfield.startswith('PsiDot1_'):
+        # get PsiDot \equiv \sum_n n*Psi^{(n)} up to 1st order
+        assert quadfield in ['PsiDot1_0', 'PsiDot1_1', 'PsiDot1_2']
+        component = int(quadfield[-1])
+        out_rfield = get_displacement_from_density_rfield(
+            base_field_mesh.compute(mode='real'),
+            component=component,
+            Psi_type='Zeldovich',
+            smoothing=smoothing_of_base_field,
+            RSD=False
+            )
+
+    elif quadfield.startswith('PsiDot2_'):
+        # get PsiDot \equiv \sum_n n*Psi^{(n)} up to 2nd order
+        assert quadfield in ['PsiDot2_0', 'PsiDot2_1', 'PsiDot2_2']
+        component = int(quadfield[-1])
+
+        # PsiDot \equiv \sum_n n*Psi^{(n)}
+        out_rfield = get_displacement_from_density_rfield(
+            base_field_mesh.compute(mode='real'),
+            component=component,
+            Psi_type='2LPT',
+            prefac_psi1=1.0,
+            prefac_psi2=2.0,  # include n=2 factor
+            smoothing=smoothing_of_base_field,
+            RSD=False
+            )
+
     else:
         raise Exception("quadfield %s not implemented" % str(quadfield))
 
     return FieldMesh(out_rfield)
+
+
+def calc_divergence_of_3_meshs(meshsource_tuple):
+    """
+    Compute divergence of 3 MeshSource objects.
+
+    Parameters
+    ----------
+    meshsource_tuple : 3-tuple of MeshSource objects
+    """
+    out_field = None
+    for direction in [0,1,2]:
+        # copy so we don't modify the input
+        cfield = meshsource_tuple[direction].compute(mode='complex').copy()
+
+        def derivative_function(k, v, d=direction):
+            return k[d] * 1j * v
+
+        # i k_d field_d
+        if out_field is None:
+            out_field = cfield.apply(derivative_function)
+        else:
+            out_field += cfield.apply(derivative_function)
+
+        del cfield
+        
+    return FieldMesh(out_field.c2r())
 
 
 def get_displacement_from_density_rfield(in_density_rfield,
@@ -697,6 +753,9 @@ def get_displacement_from_density_rfield(in_density_rfield,
                                          Psi_type=None,
                                          smoothing=None,
                                          smoothing_Psi3LPT=None,
+                                         prefac_Psi_1storder=1.0,
+                                         prefac_Psi_2ndorder=1.0,
+                                         prefac_Psi_3rdorder=1.0,
                                          RSD=False,
                                          RSD_line_of_sight=None,
                                          RSD_f_log_growth=None):
@@ -704,6 +763,14 @@ def get_displacement_from_density_rfield(in_density_rfield,
     Given density delta(x) in real space, compute Zeldovich displacemnt Psi_component(x)
     given by Psi_component(\vk) = k_component / k^2 * W(k) * delta(\vk),
     where W(k) is smoothing window.
+
+    For Psi_type='Zeldovich' compute 1st order displacement.
+    For Psi_type='2LPT' compute 1st plus 2nd order displacement.
+    etc
+
+    Multiply 1st order displacement by prefac_Psi_1storder, 2nd order by 
+    prefac_Psi_2ndorder, etc. Use this for getting time derivative of Psi.
+
 
     Follow http://rainwoodman.github.io/pmesh/intro.html.
 
@@ -769,6 +836,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
                 raise Exception('RSD_line_of_sight %s not implemented' %
                                 str(RSD_line_of_sight))
 
+        Psi_component_rfield *= prefac_Psi_1storder
+
 
         # if comm.rank == 0:
         #     print('mean, rms, max Psi^{1}_%d: %g, %g, %g' % (
@@ -828,6 +897,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
             #         np.mean(Psi_2ndorder_rfield**2)**0.5,
             #         np.max(Psi_2ndorder_rfield)))
 
+            Psi_2ndorder_rfield *= prefac_Psi_2ndorder
 
             # add 2nd order to Zeldoivhc displacement
             Psi_component_rfield += Psi_2ndorder_rfield
@@ -889,6 +959,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
             #         component, np.mean(Psi_3rdorder_rfield), 
             #         np.mean(Psi_3rdorder_rfield**2)**0.5,
             #         np.max(Psi_3rdorder_rfield)))
+
+            Psi_3rdorder_rfield *= prefac_Psi_3rdorder
 
             # add 3rd order to displacement
             Psi_component_rfield += Psi_3rdorder_rfield
