@@ -36,7 +36,8 @@ def paint_combine_and_calc_power(trf_specs,
                                  Pkmeas_helper_columns_calc_crosses=False,
                                  delete_cache=True,
                                  only_exec_trf_specs_subset=None,
-                                 calc_power_of_ext_grids=False):
+                                 calc_power_of_ext_grids=False,
+                                 f_log_growth=None):
     """
     Parameters
     ----------
@@ -85,7 +86,7 @@ def paint_combine_and_calc_power(trf_specs,
             'boxsize': sim_opts.boxsize,
             'grid_ptcle2grid_deconvolution': 
                 grid_opts.grid_ptcle2grid_deconvolution,
-            'f_log_growth': sim_opts.f_log_growth,
+            'f_log_growth': f_log_growth,
             'kmax': grid_opts.kmax
         }
 
@@ -128,8 +129,9 @@ def paint_combine_and_calc_power(trf_specs,
         # paint delta and save it in gridk.G[cat_id]
         if gridx is None and gridk is None:
             # return gridx and gridk
-            gridx, gridk = paint_utils.paint_cat_to_gridk(
+            out = paint_utils.paint_cat_to_gridk(
                 config_dict, column=cat_id, **default_paint_kwargs)
+            gridx, gridk = out
         else:
             # modify existing gridx and gridk
             paint_utils.paint_cat_to_gridk(config_dict,

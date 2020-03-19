@@ -64,6 +64,10 @@ def paint_cat_to_gridk(PaintGrid_config,
 
     logger.info("Rank %d: paint_cat_to_gridk" % comm.rank)
 
+    # return gridx and gridk if they were not passed as args
+    return_gridx = (gridx is None)
+    return_gridk = (gridk is None)
+
     # check if catalog path exists
     if PaintGrid_config.has_key('DataSource'):
         if PaintGrid_config['DataSource'].has_key('path'):
@@ -191,7 +195,7 @@ def paint_cat_to_gridk(PaintGrid_config,
                                      f_log_growth)
 
             # call extra function to do the painting, saving result in gridx.G[chi_cols]
-            paint_chicat_to_gridx(
+            gridx = paint_chicat_to_gridx(
                 chi_cols=vi_labels,
                 cat=cat_nbk,
                 weight_ptcles_by=PaintGrid_config['Painter'].get(
@@ -208,6 +212,7 @@ def paint_cat_to_gridk(PaintGrid_config,
                 cache_path=cache_path,
                 do_plot=False,
                 Ngrid=Ngrid,
+                boxsize=boxsize,
                 kmax=kmax)
 
             # delete catalog columns b/c not needed any more
@@ -348,9 +353,6 @@ def paint_cat_to_gridk(PaintGrid_config,
     #print("rescaled delta(x) rms min mean max:", np.mean(delta**2)**0.5, np.min(delta),
     #      np.mean(delta), np.max(delta))
 
-    # return gridx and gridk if they were not passed as args
-    return_gridx = (gridx is None)
-    return_gridk = (gridk is None)
 
     # Store density in RealGrid instance
     if gridx is None:
@@ -436,6 +438,7 @@ def paint_chicat_to_gridx(chi_cols=None,
                           cache_path=None,
                           do_plot=False,
                           Ngrid=None,
+                          boxsize=None,
                           fill_empty_chi_cells='RandNeighb',
                           RandNeighbSeed=1234,
                           kmax=None,
@@ -704,8 +707,13 @@ def paint_chicat_to_gridx(chi_cols=None,
         else:
             raise Exception("Invalid fill_empty_chi_cells option: %s" %
                             str(fill_empty_chi_cells))
+
         # Save as RealGrid entry.
-        gridx.append_column(chi_col, thisChi)
+        if gridx is None:
+            gridx = RealGrid(meshsource=thisChi, column=chi_col,
+                Ngrid=Ngrid, boxsize=boxsize)
+        else:
+            gridx.append_column(chi_col, thisChi)
 
         # release memory
         del thisChi
@@ -713,7 +721,13 @@ def paint_chicat_to_gridx(chi_cols=None,
         # If kmax is not None, apply smoothing
         if kmax is not None:
             col = chi_col
-            gridk.append_column(col, gridx.fft_x2k(col, drop_column=True))
+            if gridk is None:
+                gridk = ComplexGrid(
+                    column=col,
+                    meshsource=gridx.fft_x2k(col, drop_column=True),
+                    Ngrid=Ngrid, boxsize=boxsize)
+            else:
+                gridk.append_column(col, gridx.fft_x2k(col, drop_column=True))
             gridk.apply_smoothing(col, mode='Gaussian', R=0.0, kmax=kmax)
             gridx.append_column(col, gridk.fft_k2x(col, drop_column=True))
 
@@ -723,6 +737,8 @@ def paint_chicat_to_gridx(chi_cols=None,
 
     gridx.drop_column('rho4chi')
     # output is stored in gridx.G['chi_col_{0,1,2}'], nothing to return.
+
+    return gridx
 
 
 def weighted_paint_cat_to_delta(cat,

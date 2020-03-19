@@ -64,6 +64,7 @@ class MSGadgetSimOpts(SimOpts):
                                       include_2LPT_shifted_fields=False,
                                       include_3LPT_shifted_fields=False,
                                       include_minus_3LPT_shifted_fields=False,
+                                      include_div_shifted_PsiDot1=False,
                                       RSDstrings=None):
         """See parent class.
         """
@@ -136,7 +137,9 @@ class MSGadgetSimOpts(SimOpts):
                 0.0
             }
 
-        if include_shifted_fields:
+        if (include_shifted_fields 
+            or include_2LPT_shifted_fields 
+            or include_3LPT_shifted_fields):
 
             ## Shifted fields
             psi_type_strings = ['']
@@ -144,9 +147,6 @@ class MSGadgetSimOpts(SimOpts):
                 psi_type_strings.append('Psi2LPT_')
             if include_3LPT_shifted_fields:
                 psi_type_strings.append('Psi3LPT_')
-            if include_minus_3LPT_shifted_fields:
-                psi_type_strings.append('Psi-3LPT_')
-            
 
             for psi_type_str in psi_type_strings:
         
@@ -288,7 +288,30 @@ class MSGadgetSimOpts(SimOpts):
                             'nbkit_setMean': 0.0
                         }
 
+
+        if include_div_shifted_PsiDot1:
+
+            psi_type_str = ''
+            for RSDstring in RSDstrings:
+
+                # div of PsiDot1 shifted by deltalin_Zeldovich displacement
+                ext_grids['div_PsiDot1_SHIFTEDBY_%sdeltalin%s' % (
+                    psi_type_str, RSDstring
+                )] = {
+                    'dir':
+                    'div_IC_LinearMesh_PsiDot1_0_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                       RSDstring),
+                    'file_format': 'nbkit_BigFileGrid',
+                    'dataset_name': 'Field',
+                    'scale_factor': self.sim_scale_factor,
+                    'nbkit_normalize': False, # not sure
+                    'nbkit_setMean': 0.0
+                }
+
         return ext_grids
+
 
     def get_default_catalogs(self, RSDstrings=None):
         """Default catalogs to load for ms_gadget sims.
@@ -317,6 +340,51 @@ class MSGadgetSimOpts(SimOpts):
                     (halo_dir, self.halo_mass_string, RSDfilestr),
                     'weight_ptcles_by':
                     None
+                }
+
+            if False:
+                # Halo momentum divergence theta_pi = div[(1+delta)v]/(faH).
+                # narrow mass cuts: 10.8..11.8..12.8..13.8..15.1
+                # Halo catalog has v/(aH), which is velocity in Mpc/h. We divide by f.
+                # Expect \theta_\pi = div pi/(faH) ~ div v/(faH) = -\delta on large scales (in absence of velocity bias).
+                # Then, \theta_pi = div center_velocity/f = -\delta.
+                # So expect P_{theta_\pi}/Plin = 1. Looks ok in ms_gadget.
+                cats['thetapi_h%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5%s" %
+                    (halo_dir, self.halo_mass_string, RSDfilestr),
+                    'weight_ptcles_by':
+                    None,
+                    'paint_mode':
+                    'momentum_divergence',
+                    'velocity_column':
+                    'Velocity'
+                }
+
+            if True:
+                # Halo velocity divergence theta_v = div v/(faH).
+                # narrow mass cuts: 10.8..11.8..12.8..13.8..15.1
+                # Halo catalog has v/(aH), which is velocity in Mpc/h. We divide by f in paint_utils.py.
+                # Expect \theta_v = div v/(faH) = -\delta on large scales (in absence of velocity bias).
+                # Then, \theta_v = div center_velocity/f = -\delta.
+                # So expect P_theta/Plin = 1. Looks ok in ms_gadget sims.
+                # TODO: should just specify Painter dict here and don't copy in combine_fields...
+                cats['thetav_h%s' % RSDstring] = {
+                    'in_fname':
+                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5%s" %
+                    (halo_dir, self.halo_mass_string, RSDfilestr),
+                    'weight_ptcles_by':
+                    None,
+                    'paint_mode':
+                    'velocity_divergence',
+                    'velocity_column':
+                    'Velocity',
+                    'fill_empty_cells':
+                    'RandNeighbReadout',  # RandNeighb or RandNeighbReadout
+                    'randseed_for_fill_empty_cells':
+                    1000 + self.sim_seed,
+                    'raise_exception_if_too_many_empty_cells':
+                    False
                 }
 
             if False:
