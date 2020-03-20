@@ -709,8 +709,8 @@ def calc_quadratic_field(
             base_field_mesh.compute(mode='real'),
             component=component,
             Psi_type='2LPT',
-            prefac_psi1=1.0,
-            prefac_psi2=2.0,  # include n=2 factor
+            prefac_Psi_1storder=1.0,
+            prefac_Psi_2ndorder=2.0,  # include n=2 factor
             smoothing=smoothing_of_base_field,
             RSD=False
             )

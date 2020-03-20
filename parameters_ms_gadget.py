@@ -65,6 +65,7 @@ class MSGadgetSimOpts(SimOpts):
                                       include_3LPT_shifted_fields=False,
                                       include_minus_3LPT_shifted_fields=False,
                                       include_div_shifted_PsiDot1=False,
+                                      include_div_shifted_PsiDot2=False,
                                       RSDstrings=None):
         """See parent class.
         """
@@ -309,6 +310,28 @@ class MSGadgetSimOpts(SimOpts):
                     'nbkit_normalize': False, # not sure
                     'nbkit_setMean': 0.0
                 }
+
+        if include_div_shifted_PsiDot2:
+
+            psi_type_str = ''
+            for RSDstring in RSDstrings:
+
+                # div of PsiDot2 shifted by deltalin_Zeldovich displacement
+                ext_grids['div_PsiDot2_SHIFTEDBY_%sdeltalin%s' % (
+                    psi_type_str, RSDstring
+                )] = {
+                    'dir':
+                    'div_IC_LinearMesh_PsiDot2_0_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                    % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                       shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                       RSDstring),
+                    'file_format': 'nbkit_BigFileGrid',
+                    'dataset_name': 'Field',
+                    'scale_factor': self.sim_scale_factor,
+                    'nbkit_normalize': False, # not sure
+                    'nbkit_setMean': 0.0
+                }
+
 
         return ext_grids
 
