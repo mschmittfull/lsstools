@@ -71,7 +71,7 @@ class MSGadgetSimOpts(SimOpts):
         """
         ext_grids = OrderedDict()
         if RSDstrings is None:
-            RSDstrings = ['']
+            RSDstrings = [('','')]
 
         if True:
             # Linear density (ICs of the sims).
@@ -152,18 +152,18 @@ class MSGadgetSimOpts(SimOpts):
             for psi_type_str in psi_type_strings:
         
 
-                for RSDstring in RSDstrings:
+                for target_RSDstring, model_RSDstring in RSDstrings:
 
                     # 1 shifted by deltalin_Zeldovich displacement (using nbkit0.3;
                     # same as delta_ZA)
                     ext_grids['1_SHIFTEDBY_%sdeltalin%s' % (
-                        psi_type_str, RSDstring
+                        psi_type_str, model_RSDstring
                     )] = {
                         'dir':
                         '1_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                         % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                            shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                           RSDstring),
+                           model_RSDstring),
                         'file_format': 'nbkit_BigFileGrid',
                         'dataset_name': 'Field',
                         'scale_factor': self.sim_scale_factor,
@@ -174,13 +174,13 @@ class MSGadgetSimOpts(SimOpts):
                     # deltalin shifted by deltalin_Zeldovich displacement (using 
                     # nbkit0.3)
                     ext_grids['deltalin_SHIFTEDBY_%sdeltalin%s' % (
-                        psi_type_str, RSDstring
+                        psi_type_str, model_RSDstring
                     )] = {
                         'dir':
                         'IC_LinearMesh_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                         % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                            shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                           RSDstring),
+                           model_RSDstring),
                         'file_format': 'nbkit_BigFileGrid',
                         'dataset_name': 'Field',
                         'scale_factor': self.sim_scale_factor,
@@ -192,13 +192,13 @@ class MSGadgetSimOpts(SimOpts):
                     # nbkit0.3)
                     ext_grids[
                         'deltalin_growth-mean_SHIFTEDBY_%sdeltalin%s' % (
-                            psi_type_str, RSDstring
+                            psi_type_str, model_RSDstring
                         )] = {
                             'dir':
                             'IC_LinearMesh_growth-mean_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                             % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                                shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                               RSDstring),
+                               model_RSDstring),
                             'file_format': 'nbkit_BigFileGrid',
                             'dataset_name': 'Field',
                             'scale_factor': self.sim_scale_factor,
@@ -209,12 +209,12 @@ class MSGadgetSimOpts(SimOpts):
                     # G2[deltalin] shifted by deltalin_Zeldovich displacement (using 
                     # nbkit0.3)
                     ext_grids['deltalin_G2_SHIFTEDBY_%sdeltalin%s' % (
-                        psi_type_str, RSDstring)] = {
+                        psi_type_str, model_RSDstring)] = {
                         'dir':
                         'IC_LinearMesh_tidal_G2_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                         % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                            shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                           RSDstring),
+                           model_RSDstring),
                         'file_format': 'nbkit_BigFileGrid',
                         'dataset_name': 'Field',
                         'scale_factor': self.sim_scale_factor,
@@ -225,12 +225,12 @@ class MSGadgetSimOpts(SimOpts):
                     # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
                     # nbkit0.3)
                     ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin%s' % (
-                        psi_type_str, RSDstring)] = {
+                        psi_type_str, model_RSDstring)] = {
                         'dir':
                         'IC_LinearMesh_cube-mean_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                         % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                            shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                           RSDstring),
+                           model_RSDstring),
                         'file_format': 'nbkit_BigFileGrid',
                         'dataset_name': 'Field',
                         'scale_factor': self.sim_scale_factor,
@@ -244,12 +244,12 @@ class MSGadgetSimOpts(SimOpts):
                         # G2*deltalin shifted by deltalin_Zeldovich displacement (using 
                         # nbkit0.3)
                         ext_grids['deltalin_G2_delta_SHIFTEDBY_%sdeltalin%s' % (
-                            psi_type_str, RSDstring)] = {
+                            psi_type_str, model_RSDstring)] = {
                             'dir':
                             'IC_LinearMesh_G2_delta_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                             % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                                shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                               RSDstring),
+                               model_RSDstring),
                             'file_format': 'nbkit_BigFileGrid',
                             'dataset_name': 'Field',
                             'scale_factor': self.sim_scale_factor,
@@ -260,12 +260,12 @@ class MSGadgetSimOpts(SimOpts):
                         # G3 shifted by deltalin_Zeldovich displacement (using 
                         # nbkit0.3)
                         ext_grids['deltalin_G3_SHIFTEDBY_%sdeltalin%s' % (
-                            psi_type_str, RSDstring)] = {
+                            psi_type_str, model_RSDstring)] = {
                             'dir':
                             'IC_LinearMesh_tidal_G3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                             % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                                shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                               RSDstring),
+                               model_RSDstring),
                             'file_format': 'nbkit_BigFileGrid',
                             'dataset_name': 'Field',
                             'scale_factor': self.sim_scale_factor,
@@ -276,12 +276,12 @@ class MSGadgetSimOpts(SimOpts):
                         # Gamma3 shifted by deltalin_Zeldovich displacement (using 
                         # nbkit0.3)
                         ext_grids['deltalin_Gamma3_SHIFTEDBY_%sdeltalin%s' % (
-                            psi_type_str, RSDstring)] = {
+                            psi_type_str, model_RSDstring)] = {
                             'dir':
                             'IC_LinearMesh_Gamma3_intR0.00_0.50_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                             % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                                shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                               RSDstring),
+                               model_RSDstring),
                             'file_format': 'nbkit_BigFileGrid',
                             'dataset_name': 'Field',
                             'scale_factor': self.sim_scale_factor,
@@ -293,17 +293,17 @@ class MSGadgetSimOpts(SimOpts):
         if include_div_shifted_PsiDot1:
 
             psi_type_str = ''
-            for RSDstring in RSDstrings:
+            for target_RSDstring, model_RSDstring in RSDstrings:
 
                 # div of PsiDot1 shifted by deltalin_Zeldovich displacement
                 ext_grids['div_PsiDot1_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring
+                    psi_type_str, model_RSDstring
                 )] = {
                     'dir':
                     'div_IC_LinearMesh_PsiDot1_0_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                     % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                        shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
+                       model_RSDstring),
                     'file_format': 'nbkit_BigFileGrid',
                     'dataset_name': 'Field',
                     'scale_factor': self.sim_scale_factor,
@@ -314,17 +314,17 @@ class MSGadgetSimOpts(SimOpts):
         if include_div_shifted_PsiDot2:
 
             psi_type_str = ''
-            for RSDstring in RSDstrings:
+            for target_RSDstring, model_RSDstring in RSDstrings:
 
                 # div of PsiDot2 shifted by deltalin_Zeldovich displacement
                 ext_grids['div_PsiDot2_SHIFTEDBY_%sdeltalin%s' % (
-                    psi_type_str, RSDstring
+                    psi_type_str, model_RSDstring
                 )] = {
                     'dir':
                     'div_IC_LinearMesh_PsiDot2_0_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
                     % (psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
                        shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
-                       RSDstring),
+                       model_RSDstring),
                     'file_format': 'nbkit_BigFileGrid',
                     'dataset_name': 'Field',
                     'scale_factor': self.sim_scale_factor,
@@ -341,13 +341,15 @@ class MSGadgetSimOpts(SimOpts):
         """
         cats = OrderedDict()
         if RSDstrings is None:
-            RSDstrings = ['']
+            RSDstrings = [('', '')]
+
+        target_RSDstrings = [ tup[0] for tup in RSDstrings ]
 
         # FOF halos, mass given by number of particles in halo
         halo_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25' % (
             self.sim_scale_factor)
 
-        for RSDstring in RSDstrings:
+        for RSDstring in target_RSDstrings:
             if RSDstring == '':
                 RSDfilestr = ''
             else:
@@ -459,7 +461,7 @@ class MSGadgetSimOpts(SimOpts):
         hod_dir = 'nbkit_fof_%.4f/ll_0.200_nmin25_mvir' % (
             self.sim_scale_factor)
 
-        for RSDstring in RSDstrings:
+        for RSDstring in target_RSDstrings:
             
             ## nonuniform catalogs without ptcle masses
             if True:
