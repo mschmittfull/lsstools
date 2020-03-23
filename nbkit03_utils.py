@@ -978,9 +978,11 @@ def shift_catalog_by_psi_grid(cat=None,
                               boxsize=None,
                               verbose=False):
     """
-    Changes cat in-place.
+    Changes catalog in-place.
 
     If in_displacement_rfields is None, do not shift.
+    If an entry in in_displacement_rfields is None, do not shift in that
+    direction.
     """
 
     if in_displacement_rfields is None:
@@ -991,15 +993,23 @@ def shift_catalog_by_psi_grid(cat=None,
     assert len(in_displacement_rfields) == 3
 
     # copy so we don't do any in-place changes by accident
-    displacement_rfields = [
-        in_displacement_rfields[0].copy(), in_displacement_rfields[1].copy(),
-        in_displacement_rfields[2].copy()
-    ]
+    displacement_rfields = []
+    for i in range(3):
+        if in_displacement_rfields[i] is None:
+            displacement_rfields.append(None)
+        else:
+            displacement_rfields.append(in_displacement_rfields[i].copy())
 
     for direction in range(3):
+
+        displacement_rfield = displacement_rfields[direction]
+        if displacement_rfield is None:
+            # Move by 0 if in_field is None
+            cat['TMP_Psi_%d' % direction] = 0.0
+            continue
+
         if cat.comm.rank == 0:
             print("Get Psi in direction:", direction)
-        displacement_rfield = displacement_rfields[direction]
 
         # convert units so that displacement and pos have consistent units
         if displacement_units == 'Mpc/h':
@@ -1037,6 +1047,7 @@ def shift_catalog_by_psi_grid(cat=None,
     # shift positions
     if cat.comm.rank == 0:
         print("add psi")
+
     cat[pos_column] = transform.StackColumns(
         cat[pos_column][:, 0] + cat['TMP_Psi_0'],
         cat[pos_column][:, 1] + cat['TMP_Psi_1'],
