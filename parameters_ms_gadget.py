@@ -412,8 +412,8 @@ class MSGadgetSimOpts(SimOpts):
                     False,
                     'save_to_disk': True,
                     'out_fname':
-                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5%s_thetav" %
-                    (halo_dir, self.halo_mass_string, RSDfilestr),
+                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5%s_thetav%s" %
+                    (halo_dir, self.halo_mass_string, RSDfilestr, RSDstring),
                 }
 
             if False:
