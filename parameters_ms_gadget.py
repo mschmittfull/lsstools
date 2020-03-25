@@ -409,7 +409,11 @@ class MSGadgetSimOpts(SimOpts):
                     'randseed_for_fill_empty_cells':
                     1000 + self.sim_seed,
                     'raise_exception_if_too_many_empty_cells':
-                    False
+                    False,
+                    'save_to_disk': True,
+                    'out_fname':
+                    "%s/fof_nbkfmt.hdf5_BOUNDS_log10M_%s.hdf5%s_thetav" %
+                    (halo_dir, self.halo_mass_string, RSDfilestr),
                 }
 
             if False:

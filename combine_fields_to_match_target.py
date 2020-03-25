@@ -161,9 +161,19 @@ def paint_combine_and_calc_power(trf_specs,
                               gridk.G.keys(),
                               new_dataset_for_each_column=True,
                               overwrite_file_if_exists=False)
+
+        # Save file to disk for later use
+        if cat_opts.get('save_to_disk', False):
+            gridx.append_column(cat_id, gridk.fft_k2x(cat_id, drop_column=True))
+            gridx.G[cat_id].save(cat_opts['out_fname'])
+            if gridx.G[cat_id].comm.rank == 0:
+                print('Saved density of %s to %s' % (
+                    cat_id, cat_opts['out_fname']))
+
         for c in gridk.G.keys():
             if c != 'ABSK':
                 gridk.drop_column(c)
+
 
     for ext_grid_id, ext_grid_spec in ext_grids_to_load.items():
 
