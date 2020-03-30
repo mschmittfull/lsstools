@@ -165,7 +165,8 @@ def paint_combine_and_calc_power(trf_specs,
         # Save file to disk for later use
         if cat_opts.get('save_to_disk', False):
             gridx.append_column(cat_id, gridk.fft_k2x(cat_id, drop_column=True))
-            out_fname = os.path.join(paths['in_path'], cat_opts['out_fname'])
+            out_fname = os.path.join(paths['in_path'],
+                '%s_Ng%d'% (cat_opts['out_fname'], grid_opts.Ngrid))
             gridx.G[cat_id].save(out_fname)
             if gridx.G[cat_id].comm.rank == 0:
                 print('Saved density of %s to %s' % (
