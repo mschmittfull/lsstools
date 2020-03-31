@@ -511,6 +511,7 @@ def paint_chicat_to_gridx(chi_cols=None,
             # Set chi=0 if there are not ptcles in grid cell. Used until 7 April 2017.
             # Seems ok for correl coeff and BAO, but gives large-scale bias in transfer
             # function or broad-band power because violates mass conservation.
+            raise Exception('Possible bug: converting to np array only uses root rank?')
             thisChi = FieldMesh(
                 np.where(
                     rho4chi.compute(mode='real') == 0,
@@ -847,7 +848,8 @@ def mass_weighted_paint_cat_to_delta(cat,
                                     },
                                     set_mean=0,
                                     verbose=True):
-    """Paint mass-weighted halo density to delta.
+    """Paint mass-weighted halo density to delta, summing contributions so
+    field gets larger if more particles are in a cell.
     """
     # get rho
     delta, attrs = weighted_paint_cat_to_delta(cat,
@@ -871,6 +873,65 @@ def mass_weighted_paint_cat_to_delta(cat,
     print_cstats(delta, prefix='mass weighted delta: ')
     #raise Exception('dbg')
     return delta, attrs
+
+
+def mass_avg_weighted_paint_cat_to_delta(cat,
+                                    weight=None,
+                                    Nmesh=None,
+                                    to_mesh_kwargs={
+                                        'window': 'cic',
+                                        'compensated': False,
+                                        'interlaced': False
+                                    },
+                                    rho_of_empty_cells=0.0,
+                                    set_mean=0.0,
+                                    verbose=True):
+    """Paint mass-weighted density to delta, averaging contributions so
+    field gets not larger if more particles are in a cell.
+    """
+    # get rho of weighted field
+    rho, attrs = weighted_paint_cat_to_delta(cat,
+                                weight=weight,
+                                weighted_paint_mode='sum',
+                                normalize=False,
+                                Nmesh=Nmesh,
+                                to_mesh_kwargs=to_mesh_kwargs,
+                                set_mean=None,
+                                verbose=verbose)
+
+
+    # get number of contributions (weight each particle by 1)
+    rho_contris, attrs_contris = weighted_paint_cat_to_delta(cat,
+                                weight=None,
+                                weighted_paint_mode='sum',
+                                normalize=False,
+                                Nmesh=Nmesh,
+                                to_mesh_kwargs=to_mesh_kwargs,
+                                set_mean=None,
+                                verbose=verbose)
+
+    # Compute rho/rho_contris. Set to rho_of_empty_cells if there are no ptcles
+    # in grid cell.
+    # This is a pmesh.pm.RealField object.
+    rho_ratio = rho / rho_contris
+
+    def replace_nan_fcn(x, v, replace_val=rho_of_empty_cells):
+        return np.where(np.isnan(v), 0*x[0]+replace_val, v)
+
+    rho_ratio = rho_ratio.apply(replace_nan_fcn, out=Ellipsis)
+
+    cmean = get_cmean(rho_ratio)
+    #cmean = delta.cmean()
+    print('mean0:', cmean)
+    if np.abs(cmean<1e-5):
+        print('WARNING: dividing by small number when dividing by mean')
+    rho_ratio /= cmean
+    print('mean1:', get_cmean(rho_ratio))
+    rho_ratio -= get_cmean(rho_ratio)
+    rho_ratio += set_mean
+    print('mean2:', get_cmean(rho_ratio))
+    print_cstats(rho_ratio, prefix='mass avg-weighted catalog: ')
+    return rho_ratio, attrs
 
 
 def convert_np_arrays_to_lists(indict):
