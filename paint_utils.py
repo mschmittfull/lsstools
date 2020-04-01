@@ -875,7 +875,7 @@ def mass_weighted_paint_cat_to_delta(cat,
     return delta, attrs
 
 
-def mass_avg_weighted_paint_cat_to_delta(cat,
+def mass_avg_weighted_paint_cat_to_rho(cat,
                                     weight=None,
                                     Nmesh=None,
                                     to_mesh_kwargs={
@@ -884,9 +884,8 @@ def mass_avg_weighted_paint_cat_to_delta(cat,
                                         'interlaced': False
                                     },
                                     rho_of_empty_cells=0.0,
-                                    set_mean=0.0,
                                     verbose=True):
-    """Paint mass-weighted density to delta, averaging contributions so
+    """Paint mass-weighted particles to rho, averaging contributions so
     field gets not larger if more particles are in a cell.
     """
     # get rho of weighted field
@@ -923,13 +922,14 @@ def mass_avg_weighted_paint_cat_to_delta(cat,
     cmean = get_cmean(rho_ratio)
     #cmean = delta.cmean()
     print('mean0:', cmean)
-    if np.abs(cmean<1e-5):
-        print('WARNING: dividing by small number when dividing by mean')
-    rho_ratio /= cmean
-    print('mean1:', get_cmean(rho_ratio))
-    rho_ratio -= get_cmean(rho_ratio)
-    rho_ratio += set_mean
-    print('mean2:', get_cmean(rho_ratio))
+    if False:
+        if np.abs(cmean<1e-5):
+            print('WARNING: dividing by small number when dividing by mean')
+        rho_ratio /= cmean
+        print('mean1:', get_cmean(rho_ratio))
+        rho_ratio -= get_cmean(rho_ratio)
+        rho_ratio += set_mean
+        print('mean2:', get_cmean(rho_ratio))
     print_cstats(rho_ratio, prefix='mass avg-weighted catalog: ')
     return rho_ratio, attrs
 
