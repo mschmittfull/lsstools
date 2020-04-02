@@ -174,7 +174,7 @@ def paint_cat_to_gridk(PaintGrid_config,
                         theta_k.compute(mode='complex') +
                         outfield.compute(mode='complex'))
 
-            # save theta(x) in outfield  (check data types again)
+            # save theta(x) in outfield  (check data types again) 
             outfield = FieldMesh(theta_k.compute(mode='real')).to_real_field()
 
         elif paint_mode == 'velocity_divergence':

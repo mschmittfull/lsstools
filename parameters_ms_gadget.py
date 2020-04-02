@@ -66,6 +66,7 @@ class MSGadgetSimOpts(SimOpts):
                                       include_minus_3LPT_shifted_fields=False,
                                       include_div_shifted_PsiDot1=False,
                                       include_div_shifted_PsiDot2=False,
+                                      include_shifted_PsiDot1=False,
                                       RSDstrings=None):
         """See parent class.
         """

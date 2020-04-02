@@ -1121,3 +1121,25 @@ def linear_rescale_fac(current_scale_factor,
             current_scale_factor)
         #del cosmo
     return rescalefac
+
+def catalog_persist(cat, columns=None):
+    """
+    Return a CatalogSource, where the selected columns are
+    computed and persist in memory.
+    """
+
+    import dask.array as da
+    if columns is None:
+        columns = cat.columns
+
+    r = {}
+    for key in columns:
+        r[key] = cat[key]
+
+    r = da.compute(r)[0] # particularity of dask
+
+    from nbodykit.source.catalog.array import ArrayCatalog
+    c = ArrayCatalog(r, comm=cat.comm)
+    c.attrs.update(cat.attrs)
+
+    return c

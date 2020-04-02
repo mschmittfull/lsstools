@@ -18,7 +18,8 @@ class TrfSpec:
             target_field=None,
             target_spec=None,
             export_bestfit_field=False,
-            save_bestfit_field=None):
+            save_bestfit_field=None,
+            field_opts=None):
         self.linear_sources = linear_sources
         self.fixed_linear_sources = fixed_linear_sources
         self.non_orth_linear_sources = non_orth_linear_sources
@@ -34,6 +35,7 @@ class TrfSpec:
         self.target_spec = target_spec
         self.export_bestfit_field = export_bestfit_field
         self.save_bestfit_field = save_bestfit_field
+        self.field_opts = field_opts
 
     def to_dict(self):
         mydict = OrderedDict()
@@ -70,6 +72,8 @@ class TrfSpec:
                                                      'export_bestfit_field')
 
         mydict['save_bestfit_field'] = self.save_bestfit_field
+
+        mydict['field_opts'] = self.field_opts
 
         return mydict
 
