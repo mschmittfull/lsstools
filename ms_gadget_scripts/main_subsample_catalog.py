@@ -63,7 +63,7 @@ def main():
         Nptcles_per_dim = 32
         in_file = 'snap_000'
 
-    in_dir = '/scratch/mschmittfull/lssbisp2013/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
+    in_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
         sim_seed,Nptcles_per_dim,boxsize)
     
 
@@ -72,7 +72,7 @@ def main():
     ## subsample options
     sub_ssseed = 40000+sim_seed
     # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 1% subsample of 2048**3.
-    subsample_ratio = 0.025 
+    subsample_ratio = 0.0025 
 
     # write subsample to bigfile (should run with many cores)
     save_bigfile = bool(cmd_args.save_bigfile)
