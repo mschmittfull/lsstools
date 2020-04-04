@@ -1,21 +1,3 @@
-#!/home/mschmittfull/anaconda2/envs/nbodykit-0.3-env/bin/python
-
-# NOTE: We load nbodykit-0.3 environment above, so can call with ./main_test_nbkit0.3py.
-# Better: Use run.sh script.
-
-# Should make sure that PYTHONPATH="".
-
-# Run with
-#   ./main_test_nbkit0.3.py
-# or
-#   ./run.sh main_test_nbkit0.3py
-# but NOT with
-#   python main_test_nbkit0.3.py
-
-
-# Marcel Schmittfull 2018 (mschmittfull@gmail.com)
-
-
 from __future__ import print_function,division
 
 from nbodykit.lab import *
@@ -26,8 +8,6 @@ from nbodykit.source.catalog.uniform import MPIRandomState
 from argparse import ArgumentParser
 from nbodykit.utils import GatherArray
 
-# MS packages
-import Catalog_nbk01 as Catalog
 
 
 def main():
@@ -71,7 +51,8 @@ def main():
 
     ## subsample options
     sub_ssseed = 40000+sim_seed
-    # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 1% subsample of 2048**3.
+    # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 
+    # 1% subsample of 2048**3.
     subsample_ratio = 0.0025 
 
     # write subsample to bigfile (should run with many cores)
@@ -89,7 +70,8 @@ def main():
     # #####################
     in_fname = os.path.join(in_dir,in_file)
 
-    fname_subsample_bigfile = '%s_sub_sr%g_ssseed%d.bigfile' % (in_fname, subsample_ratio, sub_ssseed)
+    fname_subsample_bigfile = '%s_sub_sr%g_ssseed%d.bigfile' % (in_fname,
+        subsample_ratio, sub_ssseed)
 
     # read catalog, subsample, and save to bigfile (can do in parallel)
     if save_bigfile:
@@ -143,6 +125,8 @@ def main():
         
         if rank==0:
             # create marcel Catalog obect from subsample
+            import Catalog_nbk01 as Catalog
+
             subCat = Catalog.Catalog()
             subCat.sim_Ngrid = Nptcles_per_dim
             subCat.sim_boxsize = boxsize
