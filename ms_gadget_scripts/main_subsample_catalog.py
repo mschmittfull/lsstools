@@ -53,7 +53,7 @@ def main():
     sub_ssseed = 40000+sim_seed
     # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 
     # 1% subsample of 2048**3.
-    subsample_ratio = 0.0025 
+    subsample_ratio = 0.0015 
 
     # write subsample to bigfile (should run with many cores)
     save_bigfile = bool(cmd_args.save_bigfile)
@@ -87,7 +87,8 @@ def main():
         # create random subsample
         rng = MPIRandomState(cat.comm, seed=sub_ssseed, size=cat.size)
         rr = rng.uniform(0.0, 1.0, itemshape=(1,))
-        mysubsample = cat[rr < subsample_ratio]
+        # r is (cat.size,1) array.
+        mysubsample = cat[rr[:,0] < subsample_ratio]
         if rank==0:
             print("mysubsample:", mysubsample)
 
