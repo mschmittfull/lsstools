@@ -86,7 +86,7 @@ def main():
 
         # create random subsample
         rng = MPIRandomState(cat.comm, seed=sub_ssseed, size=cat.size)
-        rr = rng.uniform(0.0, 1.0, cat.size)
+        rr = rng.uniform(0.0, 1.0, itemshape=(1,))
         mysubsample = cat[rr < subsample_ratio]
         if rank==0:
             print("mysubsample:", mysubsample)
