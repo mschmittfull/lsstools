@@ -280,13 +280,16 @@ def apply_smoothing(mesh_source=None,
     -------
     New mesh_source object that contains the smoothed field.
     """
+    out = copy(mesh_source)
+
     if kmax is not None:
         # zero pad all k>kmax
         def kmax_cutter(k3vec, val):
             # k3vec = [k_x, k_y, k_z]
             absk = np.sqrt(sum(ki**2 for ki in k3vec))  # absk on the mesh
             #absk = (sum(ki ** 2 for ki in k3vec))**0.5 # absk on the mesh
-            return np.where(absk <= kmax, val,
+            return np.where(absk <= kmax,
+                            val,
                             np.zeros(val.shape, dtype=val.dtype))
 
         # append column
@@ -294,7 +297,7 @@ def apply_smoothing(mesh_source=None,
         #     self.G[column].apply(kmax_cutter, mode='complex', kind='wavenumber'),
         #     column_info=column_info)
         # directly modify column (add action)
-        out = mesh_source.apply(kmax_cutter, mode='complex', kind='wavenumber')
+        out = out.apply(kmax_cutter, mode='complex', kind='wavenumber')
 
     if mode == 'Gaussian':
         if R != 0.0:
@@ -304,12 +307,10 @@ def apply_smoothing(mesh_source=None,
                 return np.exp(-(R * absk)**2 / 2.0) * val
 
             #self.G[column] = self.G[column].apply(smoothing_fcn, kind='wavenumber', mode='complex')
-            out = mesh_source.apply(smoothing_fcn,
+            out = out.apply(smoothing_fcn,
                                     kind='wavenumber',
                                     mode='complex')
             #print_cstats(out.compute(mode='complex'), prefix='gridk after smoothing ', logger=self.logger)
-        else:
-            out = copy(mesh_source)
 
     elif mode == 'InverseGaussian':
         # divide by Gaussian smoothing kernel; set to 0 at high k
@@ -320,11 +321,9 @@ def apply_smoothing(mesh_source=None,
                 return np.where(R * absk <= 5.0,
                                 np.exp(+(R * absk)**2 / 2.0) * val, 0.0 * val)
 
-            out = mesh_source.apply(smoothing_fcn,
+            out = out.apply(smoothing_fcn,
                                     kind='wavenumber',
                                     mode='complex')
-        else:
-            out = copy(mesh_source)
 
     elif mode == 'kstep':
         assert type(additional_props) == dict
@@ -341,10 +340,11 @@ def apply_smoothing(mesh_source=None,
             return np.where((absk >= step_kmin) & (absk < step_kmax), val,
                             np.zeros(val.shape, dtype=val.dtype))
 
-        out = mesh_source.apply(kstep_cutter, mode='complex', kind='wavenumber')
+        out = out.apply(kstep_cutter, mode='complex', kind='wavenumber')
 
     else:
         raise Exception('Invalid smoothing mode %s' % mode)
+
 
     return out
 
