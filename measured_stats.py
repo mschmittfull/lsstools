@@ -91,7 +91,6 @@ class MeasuredPower2D(MeasuredPower):
 	Pk.bstat.poles.power_2, etc.
 
 	"""
-
     def __init__(self,
                  nbk_binned_stat=None,
                  info=None,
