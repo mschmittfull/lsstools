@@ -168,11 +168,13 @@ def write_all_hdf_files(hdf5name, bfname):
             nsnap = mm.groups()[0]
         hdf5name = os.path.join(hdf5name, "snap_"+nsnap)
     except AttributeError:
-        hdf5name = os.path.join(hdf5name, bfname)
+        hdf5name = os.path.join(hdf5name, os.path.basename(bfname))
+
     print("Writing %d hdf snapshot files to %s" % (nfiles, hdf5name))
-    for nn in range(nfiles):
-        write_hdf_file(bf, hdf5name, nn, nfiles)
-        print("Wrote file %d" % nn)
+    if True:
+        for nn in range(nfiles):
+            write_hdf_file(bf, hdf5name, nn, nfiles)
+            print("Wrote file %d" % nn)
 
 def write_bigfile_header(hdf5, bf):
     """Write out a header in the bigfile format. Default units are assumed."""
@@ -295,6 +297,10 @@ if __name__ == "__main__":
     assert args.oformat == "hdf5" or args.oformat == "bigfile"
     assert args.iformat == "bigfile" or args.iformat == "hdf5"
     assert args.iformat != args.oformat
+
+    print('Input:', args.input)
+    print('Output:', args.output)
+
     if args.oformat == "bigfile":
         write_big_file(args.output, args.input)
     else:
