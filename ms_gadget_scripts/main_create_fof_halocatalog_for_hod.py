@@ -32,6 +32,9 @@ def main():
               '/scratch/treepm_0.1000/fof . Will write to {fof}/{ll_nmin_mvir}'))
     ap.add_argument('--nmin', type=int, default=20, 
         help='min number of particles to be in the catalogue')
+    ap.add_argument('--with-peak', help='Find Peaks KDDensity estimation (slow)', 
+        default=False)
+
 
     ns = ap.parse_args()
 
@@ -57,8 +60,14 @@ def main():
         print('attrs', cat.attrs.keys())
         print('Redshift', redshift)
 
+
+    if ns.with_peak:
+        posdef = 'peak'
+    else:
+        posdef = 'cm'
+
     # Halos which have more than nmin particles are selected.
-    fof = FOF(cat, linking_length=ns.ll, nmin=ns.nmin)  
+    fof = FOF(cat, linking_length=ns.ll, nmin=ns.nmin, posdef=posdef)  
 
     # Compute halo catalog. Mass column contains virial mass, which is needed
     # to get concentration needed for hod.
@@ -80,6 +89,9 @@ def main():
     # Save the halo catalog to disk so can easily load it later to populate
     # galaxies with hod.
     out_fname = ns.fof + '/ll_{0:.3f}_nmin{1}_mvir'.format(ns.ll, ns.nmin+1)
+
+    if ns.with_peak:
+        out_fname += '_peakpos'
 
     # MS: Somehow crashes b/c some ranks don't see header file. running
     # a second time works though. maybe write header first with 
