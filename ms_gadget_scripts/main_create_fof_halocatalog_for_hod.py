@@ -67,7 +67,7 @@ def main():
         posdef = 'cm'
 
     # Halos which have more than nmin particles are selected.
-    fof = FOF(cat, linking_length=ns.ll, nmin=ns.nmin, posdef=posdef)  
+    fof = FOF(cat, linking_length=ns.ll, nmin=ns.nmin)  
 
     # Compute halo catalog. Mass column contains virial mass, which is needed
     # to get concentration needed for hod.
@@ -75,7 +75,9 @@ def main():
         cosmo=cosmo,
         redshift=redshift,
         particle_mass=M0,
-        mdef='vir')
+        mdef='vir',
+        posdef=posdef,
+        peakcolumn='Density')
 
     halos['log10M'] = np.log10(halos['Mass'])
 
