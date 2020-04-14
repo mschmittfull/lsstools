@@ -48,19 +48,31 @@ class PTChallengeGalaxiesFromRockstarHalos(SimGalaxyCatalogCreator):
         self,
         name=None,
         RSD=None,
-        RSD_los=None):
+        RSD_los=None,
+        mass_column=None,
+        log10Mmin=None,
+        sigma_log10M=None
+        ):
 
         super(SimGalaxyCatalogCreator, self).__init__(
             name=name, RSD=RSD, RSD_los=RSD_los)
+        self.mass_column = mass_column
+        self.log10Mmin = log10Mmin
+        self.sigma_log10M = sigma_log10M
 
     def get_galaxy_catalog_from_source_catalog(self, source_cat):
-        
+        assert self.mass_column in source_cat.columns
+
+
 
     def to_dict(self):
         return {
             'name': self.name,
             'RSD': self.RSD,
-            'RSD_los': self.RSD_los
+            'RSD_los': self.RSD_los,
+            'mass_column': self.mass_column,
+            'log10Mmin': self.log10Mmin,
+            'sigma_log10M': self.sigma_log10M
         }
 
 
