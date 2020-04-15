@@ -60,8 +60,8 @@ def main():
     else:
         max_rows = args.max_rows
     np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=max_rows)
-    print('Done reading data')
-    print(np_cat[:10])
+    print('Read data:')
+    print(np_cat[:5])
 
     # convert to arraycatalog
     cat = ArrayCatalog(np_cat)
@@ -81,6 +81,9 @@ def main():
     # todo: what units?
     cat['Velocity'] = vel['Velocity']
     del vel
+
+    print('Will write data:')
+    print(cat[:5])
 
     # Keep only some columns
     keep_columns = ['Position', 'Velocity', 'Mvir']
