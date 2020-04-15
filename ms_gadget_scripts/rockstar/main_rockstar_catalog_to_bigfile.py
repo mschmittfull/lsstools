@@ -87,7 +87,7 @@ def main():
     out_fname = args.rockstar_halos + '.bigfile'
     if cat.comm.rank == 0:
         print('Writing to %s' % out_fname)
-    cat.compute().save(out_fname)
+    cat.save(out_fname, columns=keep_columns)
     if cat.comm.rank == 0:
         print('Wrote %s' % out_fname)
 
