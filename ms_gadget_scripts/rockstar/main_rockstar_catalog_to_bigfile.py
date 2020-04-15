@@ -6,6 +6,7 @@ from collections import OrderedDict
 import json
 import numpy as np
 import os
+from shutil import rmtree
 
 from lsstools.nbkit03_utils import catalog_persist
 from nbodykit.source.catalog import ArrayCatalog
@@ -122,6 +123,9 @@ def main():
     else:
         out_fname = '%s_max_rows%d.bigfile' % (args.rockstar_halos, max_rows)
     
+    if os.path.exists(out_fname):
+        rmtree(out_fname)
+
     if cat.comm.rank == 0:
         print('Writing to %s' % out_fname)
     cat.save(out_fname, columns=keep_columns)
