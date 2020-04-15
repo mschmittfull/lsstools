@@ -13,6 +13,7 @@ ssh nodeXY.hpc.sns.ias.edu
 
 # start processes (use the generated auto-rockstar.cfg)
 # login to all 3 nodes we have and run (REPLACE SEED!)
-~/CODE/EXTERNAL/rockstar_marcel/rockstar -c /scratch/mschmittfull/lss/ms_gadget/run4/00000404-01536-500.0-wig/snap_0.6250.gadget3/auto-rockstar.cfg
+# should run on scratch b/c faster than data
+~/CODE/EXTERNAL/rockstar_marcel/rockstar -c /data/mschmittfull/lss/ms_gadget/run4/00000404-01536-500.0-wig/snap_0.6250.gadget3/auto-rockstar.cfg
 
 # watch output on master node

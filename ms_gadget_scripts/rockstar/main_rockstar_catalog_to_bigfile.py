@@ -82,11 +82,10 @@ def main():
     cat['Velocity'] = vel['Velocity']
     del vel
 
-    print('Will write data:')
-    print(cat[:5])
+    cat['log10Mvir'] = np.log10(cat['Mvir'])
 
     # Keep only some columns
-    keep_columns = ['Position', 'Velocity', 'Mvir']
+    keep_columns = ['Position', 'Velocity', 'log10Mvir']
     cat = catalog_persist(cat, keep_columns)
     cat.attrs['rockstar_header'] = header
 
@@ -94,6 +93,9 @@ def main():
         raise Exception('RSD not implemented')
 
 
+    print('Will write data:')
+    for c in keep_columns:
+        print('%s:' % c, cat[c])
 
     # save to bigfile
     out_fname = args.rockstar_halos + '.bigfile'
