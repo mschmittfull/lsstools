@@ -34,6 +34,11 @@ def main():
         '--RSD', help='Add RSD to positions if not 0',
         type=int,
         default=0)
+
+    ap.add_argument(
+        '--max_rows', help='Max number of rows to read. Read all if 0.',
+        type=int,
+        default=0)
     
     args = ap.parse_args()
     RSD_LOS = np.array([0,0,1])
@@ -50,7 +55,11 @@ def main():
 
     # read data
     print('Reading data')
-    np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=10)
+    if args.max_rows == 0:
+        max_rows = None
+    else:
+        max_rows = args.max_rows
+    np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=max_rows)
     print('Done reading data')
     print(np_cat[:10])
 
