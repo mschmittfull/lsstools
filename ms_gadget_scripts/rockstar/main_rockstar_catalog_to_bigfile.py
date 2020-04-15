@@ -9,6 +9,7 @@ import os
 
 from lsstools.nbkit03_utils import catalog_persist
 from nbodykit.source.catalog import ArrayCatalog
+from nbodykit import setup_logging
 
 
 
