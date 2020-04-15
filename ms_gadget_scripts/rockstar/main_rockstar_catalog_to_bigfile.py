@@ -68,14 +68,17 @@ def main():
 
 
 
-    # read data
+    # read data. 
     print('Reading data')
     if args.max_rows == 0:
         max_rows = None
     else:
         max_rows = args.max_rows
-    np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=max_rows,
-        usecols=usecols)
+
+    # TODO: np.loadtxt should be faster, but now take 5 minutes so probably ok.
+    np_cat = np.genfromtxt(
+        args.rockstar_halos, names=True, max_rows=max_rows, usecols=usecols)
+
     print('Read data:')
     print(np_cat[:5])
 
@@ -114,7 +117,11 @@ def main():
         print('%s:' % c, cat[c])
 
     # save to bigfile
-    out_fname = args.rockstar_halos + '.bigfile'
+    if max_rows is None:
+        out_fname = '%s.bigfile' % args.rockstar_halos
+    else:
+        out_fname = '%s_max_rows%d.bigfile' % (args.rockstar_halos, max_rows)
+    
     if cat.comm.rank == 0:
         print('Writing to %s' % out_fname)
     cat.save(out_fname, columns=keep_columns)
