@@ -64,7 +64,7 @@ def main():
             usecols.append(column_number)
 
     print('usecols:', usecols)
-    print(names[usecols])
+    print([names[usecol] for usecol in usecols])
 
 
 
