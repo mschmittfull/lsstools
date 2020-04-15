@@ -55,7 +55,7 @@ def main():
 
     # get names of columns
     np_cat1 = np.genfromtxt(args.rockstar_halos, names=True, max_rows=1)
-    names = np.cat1.dtype.names
+    names = np_cat1.dtype.names
     # keep only a subset
     usecol_names = ['X', 'Y', 'Z', 'VX', 'VY', 'VZ', 'Mvir']
     usecols = []
