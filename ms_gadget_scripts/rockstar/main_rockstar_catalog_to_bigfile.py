@@ -53,13 +53,29 @@ def main():
     print('Header:')
     print(header)
 
+    # get names of columns
+    np_cat1 = np.genfromtxt(args.rockstar_halos, names=True, max_rows=1)
+    names = np.cat1.dtype.names
+    # keep only a subset
+    usecol_names = ['X', 'Y', 'Z', 'VX', 'VY', 'VZ', 'Mvir']
+    usecols = []
+    for column_number, name in enumerate(names):
+        if name in usecol_names:
+            usecols.append(column_number)
+
+    print('usecols:', usecols)
+    print(names[usecols])
+
+
+
     # read data
     print('Reading data')
     if args.max_rows == 0:
         max_rows = None
     else:
         max_rows = args.max_rows
-    np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=max_rows)
+    np_cat = np.genfromtxt(args.rockstar_halos, names=True, max_rows=max_rows,
+        usecols=usecols)
     print('Read data:')
     print(np_cat[:5])
 
