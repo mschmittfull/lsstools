@@ -38,7 +38,7 @@ conda activate nbodykit-0.3.7-env
 echo "Convert bigfile to gadget3"
 #for SimSeed in 400 401 402 403 404
 #for SimSeed in 401 402 403 404
-for SimSeed in 404
+for SimSeed in 400
 do
     #InFile="/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_000"
     InFile="/data/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_0.6250"

@@ -17,10 +17,11 @@ from nbodykit import setup_logging
 def main():
     """ 
     Script to convert Rockstar halo catalog to bigfile catalog.
+    Login to a single node on helios and run there on command line.
 
     For batch runs, use e.g.
 
-    for SEED in {0..4}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --RSD 0; done
+    for SEED in {0..4}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --max_rows 5; done
     """
     setup_logging()
 
@@ -29,7 +30,7 @@ def main():
         '--rockstar_halos', 
         help=('File name of Rockstar halo catalog, e.g.'
             '/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list'),
-        default='/data/mschmittfull/lss/ms_gadget/run4/00000404-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list'
+        default='/scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list'
         )
     ap.add_argument(
         '--RSD', help='Add RSD to positions if not 0',
