@@ -534,11 +534,9 @@ class MSGadgetSimOpts(SimOpts):
                         + self.cosmo_params['Om_K']/a**2
                         + self.cosmo_params['Om_L']))
 
-                print('RSDFactor_rockstar', RSDFactor_rockstar)
-
                 # for a=0.625 get RSDFactor_rockstar=0.01145196
                 assert np.isclose(RSDFactor_rockstar, 0.01145196)
-                print('RSDstring ', RSDstring )
+
                 if RSDstring == '':
                     apply_RSD_to_position = False
                     RSD_los = None
@@ -559,8 +557,5 @@ class MSGadgetSimOpts(SimOpts):
                             log10M_column='log10Mvir', log10Mmin=12.97, sigma_log10M=0.35, RSD=False)
                          ]
                     )
-
-        raise Exception('dbg PTchallenge galaxies')
-
 
         return cats

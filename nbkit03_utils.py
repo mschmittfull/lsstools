@@ -1134,7 +1134,8 @@ def catalog_persist(cat, columns=None):
 
     r = {}
     for key in columns:
-        r[key] = cat[key]
+        if key in cat.columns:
+            r[key] = cat[key]
 
     r = da.compute(r)[0] # particularity of dask
 

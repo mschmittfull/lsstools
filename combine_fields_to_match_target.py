@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 
 from collections import OrderedDict, namedtuple
+from copy import copy
 import glob
 import json
 import numpy as np
@@ -17,6 +18,7 @@ from gen_cosmo_fcns import generate_calc_Da
 from mesh_collections import RealGrid, ComplexGrid
 import paint_utils
 import transfer_functions_from_fields
+from perr_private.model_target_pair import Target
 
 
 def paint_combine_and_calc_power(trf_specs,
@@ -67,7 +69,7 @@ def paint_combine_and_calc_power(trf_specs,
     # ##########################################################################
 
     cat_infos = OrderedDict()
-    for cat_id, cat_opts in catalogs.items():
+    for cat_id, cat_spec in catalogs.items():
 
         # TODO: could update densities_needed_for_trf_fcns if 
         # only_exec_trf_specs_subset is not None.
@@ -90,68 +92,148 @@ def paint_combine_and_calc_power(trf_specs,
             'kmax': grid_opts.kmax
         }
 
-        # nbodykit config
-        # TODO: Specify "Painter" dict in cat_opts so we don't need to copy by
-        # hand here.
-        config_dict = {
-            'Nmesh': grid_opts.Ngrid,
-            'output': os.path.join(paths['cache_path'], 'test_paint_baoshift'),
-            'DataSource': {
-                'plugin':
-                'Subsample',
-                'path':
-                get_full_fname(paths['in_path'], cat_opts['in_fname'],
-                               sim_opts.ssseed)
-            },
-            'Painter': {
-                'plugin':
-                'DefaultPainter',
-                'normalize':
-                True,  # not used when paint_mode='momentum_divergence' 
-                'setMean':
-                0.0,
-                'paint_mode':
-                cat_opts.get('paint_mode', 'overdensity'),
-                'velocity_column':
-                cat_opts.get('velocity_column', None),
-                'fill_empty_cells':
-                cat_opts.get('fill_empty_cells', None),
-                'randseed_for_fill_empty_cells':
-                cat_opts.get('randseed_for_fill_empty_cells', None),
-                'raise_exception_if_too_many_empty_cells':
-                cat_opts.get('raise_exception_if_too_many_empty_cells', True)
+        # cat_spec can be a dict (deprecated) or Target object (new code)
+        if type(cat_spec) == dict:
+
+            # nbodykit config
+            # TODO: Specify "Painter" dict in cat_spec so we don't need to copy by
+            # hand here.
+            config_dict = {
+                'Nmesh': grid_opts.Ngrid,
+                'output': os.path.join(paths['cache_path'], 'test_paint_baoshift'),
+                'DataSource': {
+                    'plugin':
+                    'Subsample',
+                    'path':
+                    get_full_fname(paths['in_path'], cat_spec['in_fname'],
+                                   sim_opts.ssseed)
+                },
+                'Painter': {
+                    'plugin':
+                    'DefaultPainter',
+                    'normalize':
+                    True,  # not used when paint_mode='momentum_divergence' 
+                    'setMean':
+                    0.0,
+                    'paint_mode':
+                    cat_spec.get('paint_mode', 'overdensity'),
+                    'velocity_column':
+                    cat_spec.get('velocity_column', None),
+                    'fill_empty_cells':
+                    cat_spec.get('fill_empty_cells', None),
+                    'randseed_for_fill_empty_cells':
+                    cat_spec.get('randseed_for_fill_empty_cells', None),
+                    'raise_exception_if_too_many_empty_cells':
+                    cat_spec.get('raise_exception_if_too_many_empty_cells', True)
+                }
             }
-        }
 
-        if cat_opts['weight_ptcles_by'] is not None:
-            config_dict['Painter']['weight'] = cat_opts['weight_ptcles_by']
+            if cat_spec['weight_ptcles_by'] is not None:
+                config_dict['Painter']['weight'] = cat_spec['weight_ptcles_by']
 
-        # paint delta and save it in gridk.G[cat_id]
-        if gridx is None and gridk is None:
-            # return gridx and gridk
-            out = paint_utils.paint_cat_to_gridk(
-                config_dict, column=cat_id, **default_paint_kwargs)
-            gridx, gridk = out
+            # paint delta and save it in gridk.G[cat_id]
+            if gridx is None and gridk is None:
+                # return gridx and gridk
+                out = paint_utils.paint_cat_to_gridk(
+                    config_dict, column=cat_id, **default_paint_kwargs)
+                gridx, gridk = out
+            else:
+                # modify existing gridx and gridk
+                paint_utils.paint_cat_to_gridk(config_dict,
+                                               column=cat_id,
+                                               **default_paint_kwargs)
+
+            # save info in a more accessible way
+            cat_infos[cat_id] = {
+                'simple':
+                simplify_cat_info(gridk.column_infos[cat_id],
+                                  weight_ptcles_by=cat_spec['weight_ptcles_by']),
+                'full':
+                gridk.column_infos[cat_id]
+            }
+            print("\n\nsimple cat info:")
+            print(cat_infos[cat_id]['simple'])
+            print("")
+
+
+        elif type(cat_spec) == Target:
+
+            # get target catalog
+            cat_spec_full_fname = copy(cat_spec)
+            cat_spec_full_fname.in_fname = os.path.join(
+                paths['in_path'], cat_spec.in_fname)
+            cat = cat_spec_full_fname.get_catalog()
+
+            if 'BoxSize' not in cat.attrs:
+                cat.attrs['BoxSize'] = [
+                sim_opts.boxsize, sim_opts.boxsize, sim_opts.boxsize]
+
+            # paint to delta
+            if cat_spec.val_column is None:
+                # just get overdensity, not weighting by anything
+                delta, attrs = paint_utils.mass_weighted_paint_cat_to_delta(
+                    cat,
+                    weight=None,
+                    Nmesh=grid_opts.Ngrid,
+                    to_mesh_kwargs={
+                        'window': 'cic',
+                        'compensated': False,
+                        'interlaced': False
+                    },
+                    set_mean=0,
+                    verbose=True)
+            else:
+                raise Exception(
+                    'TODO: implement mass-weighted painting, calling '
+                    'mass_weighted_paint_cat_to_delta or '
+                    'mass_avg_weighted_paint_cat_to_rho.')
+
+            column_info = attrs
+
+            # some special handling of attrs so we can store them as json...
+            stringify_columns = ['rockstar_header', 'BoxSize', 'Nmesh']
+            for col in stringify_columns:
+                if col in column_info:
+                    column_info[col] = str(column_info[col])
+            print('column_info:', column_info)
+            #raise Exception('tmp')
+
+            # save delta in gridk.G[cat_id]  (TODO: get rid of gridx and gridk)
+            if gridx is None:
+                gridx = RealGrid(meshsource=delta,
+                         column=cat_id,
+                         Ngrid=grid_opts.Ngrid,
+                         column_info=column_info,
+                         boxsize=sim_opts.boxsize)
+            else:
+                gridx.append_column(cat_id, delta, column_info=column_info)
+
+            if gridk is None:
+                gridk = ComplexGrid(meshsource=gridx.fft_x2k(cat_id,
+                                                         drop_column=True),
+                                column=cat_id,
+                                Ngrid=gridx.Ngrid,
+                                boxsize=gridx.boxsize,
+                                column_info=column_info)
+            else:
+                gridk.append_column(cat_id,
+                                    gridx.fft_x2k(cat_id,
+                                                  drop_column=True),
+                                    column_info=column_info)
+
+            # store catalog infos
+            cat_infos[cat_id] = {
+                'simple': {},
+                'full': gridk.column_infos[cat_id]
+            }
+
         else:
-            # modify existing gridx and gridk
-            paint_utils.paint_cat_to_gridk(config_dict,
-                                           column=cat_id,
-                                           **default_paint_kwargs)
+            raise Exception('Invalid catalog specification %s' % str(cat_spec))
+
 
         print("\n\nINFO %s:\n" % cat_id)
         print(gridk.column_infos[cat_id])
 
-        # save info in a more accessible way
-        cat_infos[cat_id] = {
-            'simple':
-            simplify_cat_info(gridk.column_infos[cat_id],
-                              weight_ptcles_by=cat_opts['weight_ptcles_by']),
-            'full':
-            gridk.column_infos[cat_id]
-        }
-        print("\n\nsimple cat info:")
-        print(cat_infos[cat_id]['simple'])
-        print("")
 
         # ######################################################################
         # Cache grid to disk, drop from memory, and reload below
@@ -163,10 +245,10 @@ def paint_combine_and_calc_power(trf_specs,
                               overwrite_file_if_exists=False)
 
         # Save file to disk for later use
-        if cat_opts.get('save_to_disk', False):
+        if type(cat_spec)==dict and cat_spec.get('save_to_disk', False):
             gridx.append_column(cat_id, gridk.fft_k2x(cat_id, drop_column=True))
             out_fname = os.path.join(paths['in_path'],
-                '%s_Ng%d'% (cat_opts['out_fname'], grid_opts.Ngrid))
+                '%s_Ng%d'% (cat_spec['out_fname'], grid_opts.Ngrid))
             gridx.G[cat_id].save(out_fname)
             if gridx.G[cat_id].comm.rank == 0:
                 print('Saved density of %s to %s' % (
