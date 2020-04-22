@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 from collections import namedtuple, OrderedDict
+import numpy as np
 
 from parameters import SimOpts
 
@@ -511,6 +512,55 @@ class MSGadgetSimOpts(SimOpts):
                 }
 
 
+        for RSDstring in target_RSDstrings:
+
+            if True:                  
+                # PT Challenge galaxies from rockstar halos. 
+
+                # Rockstar gives core positions and velocities.
+                # Units: 1/(aH) = 1./(a * H0*np.sqrt(Om_m/a**3+Om_L)) * (H0/100.) in Mpc/h / (km/s)
+                # = 1/(100*a*sqrt(Om_m/a**3+Om_L)).
+                # For ms_gadget, get 1/(aH) = 0.01145196 Mpc/h/(km/s) = 0.0183231*0.6250 Mpc/h/(km/s).
+                # Note that our MP-Gadget files have RSDFactor=1/(a^2H)=0.0183231 for a=0.6250 b/c they use a^2\dot x for Velocity.
+                # Rockstar 'Velocity' column is v=a\dot x in km/s ("Velocities in 
+                # km / s (physical, peculiar)")
+
+                from perr_private.model_target_pair import Target
+                from sim_galaxy_catalog_creator import PTChallengeGalaxiesFromRockstarHalos
+
+                a = self.sim_scale_factor
+                RSDFactor_rockstar = 1./(100.*a * np.sqrt(
+                        self.cosmo_params['Om_m']/a**3 
+                        + self.cosmo_params['Om_K']/a**2
+                        + self.cosmo_params['Om_L']))
+
+                print('RSDFactor_rockstar', RSDFactor_rockstar)
+
+                # for a=0.625 get RSDFactor_rockstar=0.01145196
+                assert np.isclose(RSDFactor_rockstar, 0.01145196)
+                print('RSDstring ', RSDstring )
+                if RSDstring == '':
+                    apply_RSD_to_position = False
+                    RSD_los = None
+                elif RSDstring == '_RSD001':
+                    apply_RSD_to_position = True
+                    RSD_los = [0,0,1]
+
+                cats['delta_gPTC%s' % RSDstring] = Target(
+                    name='delta_gPTC%s' % RSDstring,
+                    in_fname='snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % (
+                        self.sim_scale_factor),
+                    position_column='Position',
+                    velocity_column='Velocity', 
+                    apply_RSD_to_position=apply_RSD_to_position,
+                    RSD_los=RSD_los,
+                    RSDFactor=RSDFactor_rockstar, # to convert velocity to RSD displacement in Mpc/h
+                    cuts=[PTChallengeGalaxiesFromRockstarHalos(
+                            log10M_column='log10Mvir', log10Mmin=12.97, sigma_log10M=0.35, RSD=False)
+                         ]
+                    )
+
+        raise Exception('dbg PTchallenge galaxies')
 
 
         return cats

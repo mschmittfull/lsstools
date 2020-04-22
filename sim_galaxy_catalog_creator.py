@@ -98,6 +98,7 @@ class PTChallengeGalaxiesFromRockstarHalos(SimGalaxyCatalogCreator):
 
     def to_dict(self):
         return {
+            'class_name': self.__class__.__name__,
             'name': self.name,
             'RSD': self.RSD,
             'RSD_los': self.RSD_los,
@@ -105,6 +106,12 @@ class PTChallengeGalaxiesFromRockstarHalos(SimGalaxyCatalogCreator):
             'log10Mmin': self.log10Mmin,
             'sigma_log10M': self.sigma_log10M
         }
+
+    def __str__(self):
+        return json.dumps(self.to_dict())
+
+    def __repr__(self):
+        return self.__str__()
 
 
 

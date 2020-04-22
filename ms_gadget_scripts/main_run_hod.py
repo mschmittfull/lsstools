@@ -32,7 +32,7 @@ def main():
         help=('Directory of halo catalog with mvir Mass, e.g.'
             '/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'),
         #default='/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'
-        default='/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir/'
+        default='/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000400-01536-500.0-wig/nbkit_fof_0.6250/ll_0.200_nmin25_mvir'
         )
     ap.add_argument(
         '--RSD', help='Add RSD to positions if not 0',
@@ -56,15 +56,25 @@ def main():
         RSD_LOS=RSD_LOS,
         HOD_model_name=args.HOD_model_name)
 
-    # save to hdf5
-    out_fname = os.path.join(args.fof_halos_mvir, 
-        'HOD_%s' % args.HOD_model_name)
+    if False:
+        # save to hdf5
+        out_fname = os.path.join(args.fof_halos_mvir, 
+            '/HOD_%s' % args.HOD_model_name)
+        if args.RSD:
+            assert np.all(RSD_LOS == np.array([0,0,1]))
+            out_fname += '_RSD001'
+        out_fname += '.hdf5'
+        save_galcat_to_hdf5(galcat, out_fname=out_fname)
+        print('Wrote %s' % out_fname)
+
+    # save to bigfile
+    out_fname = '%s_HOD_%s' % (args.fof_halos_mvir, args.HOD_model_name)
     if args.RSD:
         assert np.all(RSD_LOS == np.array([0,0,1]))
         out_fname += '_RSD001'
-    out_fname += '.hdf5'
-
-    save_galcat_to_hdf5(galcat, out_fname=out_fname)
+    out_fname += '.bigfile'
+    galcat.save(out_fname, columns=galcat.columns)
+    print('Wrote %s' % out_fname)
 
 
 
@@ -172,6 +182,7 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
             # Compute rsd_factor = 1/(aH(a)) = (1+z)/H(z)
             # see https://nbodykit.readthedocs.io/en/latest/catalogs/common-operations.html#Adding-Redshift-space-Distortions
             rsd_factor = (1.+redshift) / (100. * cosmo.efunc(redshift))
+            raise Exception('this is not correct for ms_gadget which has a^2 dx/dt for velocity.')
             galcat['VelocityOffset'] = rsd_factor * galcat['Velocity']
 
             # columns: ['Position', 'Selection', 'Value', 'Velocity', 'VelocityOffset', 'Weight', 'conc_NFWmodel', 'gal_type', 'halo_hostid', 'halo_id', 'halo_mvir', 'halo_num_centrals', 'halo_num_satellites', 'halo_rvir', 'halo_upid', 'halo_vx', 'halo_vy', 'halo_vz', 'halo_x', 'halo_y', 'halo_z', 'host_centric_distance', 'vx', 'vy', 'vz', 'x', 'y', 'z']
@@ -183,6 +194,7 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
     if add_RSD:
         assert type(RSD_LOS)==np.ndarray
         assert RSD_LOS.shape==(3,)
+        raise Exception('todo: use RSDFactor of the catalog! VelocityOffset can be wrong by factor of a if catalog has a^2 dx/dt (ms_gadget) instead of a dx/dt.')
         galcat['Position'] = (
             galcat['Position'] + galcat['VelocityOffset'] * RSD_LOS)
 
