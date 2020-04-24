@@ -599,7 +599,7 @@ def calc_quadratic_field(
 
         # Have 3/2 G2 delta = 3/2 (p1.p2)^2/(p1^2 p2^2) - 3/2
         # so
-        # G3 = 3/2 G2 delta + delta^3 - (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
+        # G3 = 3/2 G2 delta + delta^3 - (p1.p2)(p2.p3)(p1.p3)/(p1^2 p2^2 p3^2)
 
         # Compute 1 * delta^3(\vx)
         out_rfield = base_field_mesh.compute(mode='real')**3
@@ -613,7 +613,7 @@ def calc_quadratic_field(
                 smoothing_of_base_field=smoothing_of_base_field,
                 verbose=verbose).compute(mode='real'))
 
-        # Compute ppp = (p1.p2)(p2.p3)(p2.p3)/(p1^2 p2^2 p3^2)
+        # Compute ppp = (p1.p2)(p2.p3)(p1.p3)/(p1^2 p2^2 p3^2)
         # = k.q k.p q.p / (k^2 q^2 p^2)
         # = k_i q_i k_j p_j q_l p_l / (k^2 q^2 p^2)
         # = sum_ijl d_ij(k) d_il(q) d_jl(p)
@@ -784,7 +784,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
         Line of sight direction, e.g. [0,0,1] for z axis.
     """
     assert (component in [0, 1, 2])
-    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT']
+    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']
 
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
@@ -792,7 +792,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
     # copy so we don't do any in-place changes by accident
     density_rfield = in_density_rfield.copy()
 
-    if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT']:
+    if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']:
 
         # get zeldovich displacement in direction given by component
 
@@ -847,7 +847,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
 
 
 
-        if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT']:
+        if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']:
 
             # add 2nd order Psi on top of Zeldovich
 
@@ -904,15 +904,19 @@ def get_displacement_from_density_rfield(in_density_rfield,
             del Psi_2ndorder_rfield
 
 
-        if Psi_type in ['3LPT', '-3LPT']:
+        if Psi_type in ['3LPT', '-3LPT', '3LPT_v2']:
 
             # add 3nd order Psi on top of Zeldovich
 
             # compute G3
             G3_cfield = calc_quadratic_field(
-                base_field_mesh=FieldMesh(in_density_rfield),
-                quadfield='tidal_G3',
-                smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+                    base_field_mesh=FieldMesh(in_density_rfield),
+                    quadfield='tidal_G3',
+                    smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+
+            if Psi_type == '3LPT_v2':
+                # switch sign of G3
+                G3_cfield *= -1.0
 
             Psi_3rdorder_rfield = 1./9. * (
                 G3_cfield.apply(potential_transfer_function).apply(
