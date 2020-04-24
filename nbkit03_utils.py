@@ -594,7 +594,7 @@ def calc_quadratic_field(
         out_rfield -= mymean 
 
 
-    elif quadfield == 'tidal_G3':
+    elif quadfield in ['tidal_G3', 'tidal_G3_flipped_dij_sign']:
         # Get G3[delta]
 
         # Have 3/2 G2 delta = 3/2 (p1.p2)^2/(p1^2 p2^2) - 3/2
@@ -640,6 +640,10 @@ def calc_quadratic_field(
 
                 if verbose:
                     rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+                if quadfield == 'tidal_G3_flipped_dij_sign':
+                    # flip sign of dij
+                    dij_x *= -1.0
 
                 dij_x_dict[(idir,jdir)] = dij_x
                 del dij_x
@@ -784,7 +788,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
         Line of sight direction, e.g. [0,0,1] for z axis.
     """
     assert (component in [0, 1, 2])
-    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']
+    assert Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2',
+        '3LPT_v3']
 
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
@@ -792,7 +797,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
     # copy so we don't do any in-place changes by accident
     density_rfield = in_density_rfield.copy()
 
-    if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']:
+    if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2',
+        '3LPT_v3']:
 
         # get zeldovich displacement in direction given by component
 
@@ -847,7 +853,7 @@ def get_displacement_from_density_rfield(in_density_rfield,
 
 
 
-        if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2']:
+        if Psi_type in ['2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2', '3LPT_v3']:
 
             # add 2nd order Psi on top of Zeldovich
 
@@ -904,19 +910,27 @@ def get_displacement_from_density_rfield(in_density_rfield,
             del Psi_2ndorder_rfield
 
 
-        if Psi_type in ['3LPT', '-3LPT', '3LPT_v2']:
+        if Psi_type in ['3LPT', '-3LPT', '3LPT_v2', '3LPT_v3']:
 
             # add 3nd order Psi on top of Zeldovich
 
             # compute G3
-            G3_cfield = calc_quadratic_field(
-                    base_field_mesh=FieldMesh(in_density_rfield),
-                    quadfield='tidal_G3',
-                    smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+            if Psi_type == '3LPT_v3':
+                # flip sign of dij
+                G3_cfield = calc_quadratic_field(
+                        base_field_mesh=FieldMesh(in_density_rfield),
+                        quadfield='tidal_G3_flipped_dij_sign',
+                        smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
 
-            if Psi_type == '3LPT_v2':
-                # switch sign of G3
-                G3_cfield *= -1.0
+            else:
+                G3_cfield = calc_quadratic_field(
+                        base_field_mesh=FieldMesh(in_density_rfield),
+                        quadfield='tidal_G3',
+                        smoothing_of_base_field=smoothing_Psi3LPT).compute(mode='complex')
+
+                if Psi_type == '3LPT_v2':
+                    # switch sign of G3
+                    G3_cfield *= -1.0
 
             Psi_3rdorder_rfield = 1./9. * (
                 G3_cfield.apply(potential_transfer_function).apply(
