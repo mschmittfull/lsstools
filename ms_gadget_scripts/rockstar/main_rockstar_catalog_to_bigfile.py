@@ -21,7 +21,7 @@ def main():
 
     For batch runs, use e.g.
 
-    for SEED in {0..4}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --max_rows 5; done
+    for SEED in {0..4}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --max_rows 5 --include_parent_ID; done
     """
     setup_logging()
 
@@ -30,17 +30,26 @@ def main():
         '--rockstar_halos', 
         help=('File name of Rockstar halo catalog, e.g.'
             '/data/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list'),
-        default='/scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list'
+        default='/scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list.parents'
         )
-    ap.add_argument(
-        '--RSD', help='Add RSD to positions if not 0',
-        type=int,
-        default=0)
+
+    ap.add_argument('--add_RSD', dest='RSD', action='store_true', help='Add RSD to position')
+
+    ap.add_argument('--include_parent_ID', dest='include_parent_ID', 
+        action='store_true', help='Include ID and parent ID in bigfile.')
+
+    # ap.add_argument(
+    #     '--RSD', help='Add RSD to positions if not 0',
+    #     type=int,
+    #     default=0)
 
     ap.add_argument(
         '--max_rows', help='Max number of rows to read. Read all if 0.',
         type=int,
         default=0)
+
+    ap.set_defaults(RSD=False, include_parent_ID=False)
+
     
     args = ap.parse_args()
     RSD_LOS = np.array([0,0,1])
@@ -60,6 +69,9 @@ def main():
     names = np_cat1.dtype.names
     # keep only a subset
     usecol_names = ['X', 'Y', 'Z', 'VX', 'VY', 'VZ', 'Mvir']
+    if args.include_parent_ID:
+        usecol_names += ['ID', 'PID']
+
     usecols = []
     for column_number, name in enumerate(names):
         if name in usecol_names:

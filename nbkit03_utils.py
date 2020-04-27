@@ -577,6 +577,26 @@ def calc_quadratic_field(
             smoothing_of_base_field=smoothing_of_base_field,
             verbose=verbose).compute(mode='real')
 
+    elif quadfield == 'velocity_G2':
+        # G2 = delta^2...
+        out_rfield = calc_quadratic_field(
+            quadfield='growth',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose).compute(mode='real')
+        # ... - shift
+        out_rfield -= calc_quadratic_field(
+            quadfield='shift',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose).compute(mode='real')
+        # ... + 4/7 tidal_G2
+        out_rfield += 4. / 7. * calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose).compute(mode='real')
+
     elif quadfield == 'G2_delta':
         # Get G2[delta] * delta
         out_rfield = (
