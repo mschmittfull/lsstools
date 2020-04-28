@@ -117,8 +117,13 @@ def main():
 
     cat['log10Mvir'] = np.log10(cat['Mvir'])
 
+
     # Keep only some columns
     keep_columns = ['Position', 'Velocity', 'log10Mvir']
+    if args.include_parent_ID:
+        # also keep halo ID and parent ID
+        keep_columns += ['ID', 'PID']
+
     cat = catalog_persist(cat, keep_columns)
     cat.attrs['rockstar_header'] = header
 
