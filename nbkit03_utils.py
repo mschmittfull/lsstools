@@ -1182,3 +1182,51 @@ def catalog_persist(cat, columns=None):
     c.attrs.update(cat.attrs)
 
     return c
+
+
+def convert_nbk_cat_to_np_array(cat, ID_as_int=False, skip_columns=None,
+    position_as_xyz=False):
+    """
+    Convert nbodykit catalog to structured numpy array.
+    """
+    if skip_columns is None:
+        skip_columns = []
+
+    struc_dtype = []
+    for col in cat.columns:
+        if col in skip_columns:
+            continue
+        shape = cat[col].shape
+        dtype = cat[col].dtype
+        if ID_as_int:
+            if 'ID' in col:
+                dtype = np.longlong
+        if len(shape) == 1:
+            struc_dtype.append( (col, dtype) )
+        elif len(shape) == 2:
+            struc_dtype.append( (col, dtype, shape[1]) )
+        else:
+            raise Exception('Invalid column shape %s' % str(shape))
+
+    if position_as_xyz:
+        # also store position as xyz
+        struc_dtype.append( ('xPos', 'f8') )
+        struc_dtype.append( ('yPos', 'f8') )
+        struc_dtype.append( ('zPos', 'f8') )
+            
+    print(struc_dtype)
+    
+    # list of columns
+    out = np.empty(cat.csize, dtype=struc_dtype)
+    for col in cat.columns:
+        if col not in skip_columns:
+            out[col] = cat[col]
+
+    if position_as_xyz:
+        out['xPos'] = out['Position'][:,0]
+        out['yPos'] = out['Position'][:,1]
+        out['zPos'] = out['Position'][:,2]
+
+    return out
+
+
