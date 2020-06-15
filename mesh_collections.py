@@ -252,8 +252,10 @@ class Grid(object):
                         if print_column_info:
                             self.logger.info("column_info: %s" %
                                              str(self.column_infos[grid_col]))
-                        bb.attrs['grid_column_info'] = json.dumps(
-                            self.column_infos[grid_col])
+                        if False:
+                            # comment out b/c RSDFactor is not dumped properly
+                            bb.attrs['grid_column_info'] = json.dumps(
+                                self.column_infos[grid_col])
 
         if self.comm.rank == 0:
             self.logger.info("Wrote GridColumns %s" % str(columns))
