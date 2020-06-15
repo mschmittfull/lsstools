@@ -40,7 +40,7 @@ def main():
         default=0)
     ap.add_argument(
         '--HOD_model_name', help='Name of HOD model',
-        default='Zheng07_HandSeljak17')
+        default='Zheng07_HandSeljak17_v2')
 
     args = ap.parse_args()
     RSD_LOS = np.array([0,0,1])
@@ -56,7 +56,7 @@ def main():
         RSD_LOS=RSD_LOS,
         HOD_model_name=args.HOD_model_name)
 
-    if False:
+    if True:
         # save to hdf5
         out_fname = os.path.join(args.fof_halos_mvir, 
             '/HOD_%s' % args.HOD_model_name)
@@ -107,13 +107,15 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
     if cat.comm.rank == 0:
         print('BoxSize', halos.attrs['BoxSize'])
         print('attrs', halos.attrs.keys())
+        print('RSDFactor', halos.attrs['RSDFactor'])
+        print('Columns', halos.columns)
 
     # Define HOD
     if HOD_model_name in [
-        'Zheng07_HandSeljak17',
-        'Zheng07_HandSeljak17_centrals',
-        'Zheng07_HandSeljak17_sats',
-        'Zheng07_HandSeljak17_parent_halos']:
+        'Zheng07_HandSeljak17_v2',
+        'Zheng07_HandSeljak17_centrals_v2',
+        'Zheng07_HandSeljak17_sats_v2',
+        'Zheng07_HandSeljak17_parent_halos_v2']:
 
         # (1) Hand & Seljak 1706.02362:  
         # Uses {log10 Mmin, sigma log10 M, log10 M1, alpha, log10 Mcut} = {12.99, 0.308, 14.08, 0.824, 13.20}.
@@ -126,6 +128,8 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
         # alpha - Power law slope of the relation between halo mass and <Nsat>.
         # logM0 - Low-mass cutoff in <Nsat>.
         # logM1 - Characteristic halo mass where <Nsat> begins to assume a power law form.
+
+        # 11 June 2020: Zheng07_HandSeljak17_v2 uses fixed RSDFactor, which was wrong by factor of 1/a before.
 
         hodmodel = Zheng07Model.to_halotools(cosmo=cosmo, redshift=redshift, mdef='vir')
 
@@ -143,21 +147,21 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
         galcat = halos.populate(hodmodel, seed=hod_seed)
 
         # select which galaxies to keep
-        if HOD_model_name == 'Zheng07_HandSeljak17':
+        if HOD_model_name == 'Zheng07_HandSeljak17_v2':
             # keep all
             pass
 
-        elif HOD_model_name == 'Zheng07_HandSeljak17_centrals':
+        elif HOD_model_name == 'Zheng07_HandSeljak17_centrals_v2':
             # select only centrals
             ww = galcat['gal_type'] == 0  # 0: central, 1: satellite
             galcat = galcat[ww]
 
-        elif HOD_model_name == 'Zheng07_HandSeljak17_sats':
+        elif HOD_model_name == 'Zheng07_HandSeljak17_sats_v2':
             # select only satellites
             ww = galcat['gal_type'] == 1  # 0: central, 1: satellite
             galcat = galcat[ww]
 
-        elif HOD_model_name == 'Zheng07_HandSeljak17_parent_halos':
+        elif HOD_model_name == 'Zheng07_HandSeljak17_parent_halos_v2':
             # select centrals
             ww = galcat['gal_type'] == 0  # 0: central, 1: satellite
             galcat = galcat[ww]
@@ -194,7 +198,16 @@ def run_hod(cat, HOD_model_name=None, hod_seed=42,
     if add_RSD:
         assert type(RSD_LOS)==np.ndarray
         assert RSD_LOS.shape==(3,)
+        print('cat attrs:', galcat.attrs)
+
+
+        # It seems like halos.populate gives satellite velocity in km/s by drawing from NFW profile, and sets central velocity equal to halo velocity.
+        # But not sure what units are assumed for halo velocity. Note we have different velocity a prefactor in ms_gadget and new MP-Gadget format.
+        # Also, should probably use peak velocity instead of bulk velocity of halos for the centrals velocity.
+        # So HOD just seems screwed up.
         raise Exception('todo: use RSDFactor of the catalog! VelocityOffset can be wrong by factor of a if catalog has a^2 dx/dt (ms_gadget) instead of a dx/dt.')
+
+
         galcat['Position'] = (
             galcat['Position'] + galcat['VelocityOffset'] * RSD_LOS)
 

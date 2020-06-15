@@ -37,10 +37,17 @@ def get_cstat(data, statistic, comm=None):
         csize = comm.allreduce(data.size, op=MPI.SUM)
         return csum / float(csize)
     elif statistic == 'rms':
-        rsum = comm.allreduce((data**2).sum())
+        mean = get_cmean(data, comm=comm)
+        rsum = comm.allreduce(((data-mean)**2).sum())
         csize = comm.allreduce(data.size)
         rms = (rsum / float(csize))**0.5
         return rms
+    elif statistic == 'sum':
+        csum = comm.allreduce(data.sum(), op=MPI.SUM)
+        return csum
+    elif statistic == 'sqsum':
+        csqsum = comm.allreduce((data**2).sum(), op=MPI.SUM)
+        return csqsum
     else:
         raise Exception("Invalid statistic %s" % statistic)
 
@@ -48,6 +55,11 @@ def get_cstat(data, statistic, comm=None):
 def get_cmean(data, comm=None):
     return get_cstat(data, 'mean', comm=comm)
 
+def get_csum(data, comm=None):
+    return get_cstat(data, 'sum', comm=comm)
+
+def get_csqsum(data, comm=None):
+    return get_cstat(data, 'sqsum', comm=comm)
 
 def get_cmin(data, comm=None):
     return get_cstat(data, 'min', comm=comm)
@@ -97,7 +109,8 @@ def print_cstats(data, prefix="", logger=None, comm=None):
     cstats = get_cstats_string(data, comm)
     if comm.rank == 0:
         logger.info('%s%s' % (prefix, cstats))
-    print('%s%s' % (prefix, cstats))
+        
+        print('%s%s' % (prefix, cstats))
 
 
 
@@ -745,7 +758,7 @@ def calc_quadratic_field(
     return FieldMesh(out_rfield)
 
 
-def calc_divergence_of_3_meshs(meshsource_tuple):
+def calc_divergence_of_3_meshs(meshsource_tuple, prefactor=1.0):
     """
     Compute divergence of 3 MeshSource objects.
 
@@ -759,7 +772,7 @@ def calc_divergence_of_3_meshs(meshsource_tuple):
         cfield = meshsource_tuple[direction].compute(mode='complex').copy()
 
         def derivative_function(k, v, d=direction):
-            return k[d] * 1j * v
+            return prefactor * k[d] * 1j * v
 
         # i k_d field_d
         if out_field is None:
@@ -773,6 +786,7 @@ def calc_divergence_of_3_meshs(meshsource_tuple):
 
 
 def get_displacement_from_density_rfield(in_density_rfield,
+                                         in_density_cfield=None,
                                          component=None,
                                          Psi_type=None,
                                          smoothing=None,
@@ -791,6 +805,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
     For Psi_type='Zeldovich' compute 1st order displacement.
     For Psi_type='2LPT' compute 1st plus 2nd order displacement.
     etc
+
+    Supply either in_density_rfield or in_density_cfield.
 
     Multiply 1st order displacement by prefac_Psi_1storder, 2nd order by 
     prefac_Psi_2ndorder, etc. Use this for getting time derivative of Psi.
@@ -814,8 +830,14 @@ def get_displacement_from_density_rfield(in_density_rfield,
     from nbodykit import CurrentMPIComm
     comm = CurrentMPIComm.get()
 
-    # copy so we don't do any in-place changes by accident
-    density_rfield = in_density_rfield.copy()
+    if in_density_cfield is None:
+        # copy so we don't do any in-place changes by accident
+        density_rfield = in_density_rfield.copy()
+        density_cfield = density_rfield.r2c()
+    else:
+        assert in_density_rfield is None
+        density_cfield = in_density_cfield.copy()
+
 
     if Psi_type in ['Zeldovich', '2LPT', '-2LPT', '3LPT', '-3LPT', '3LPT_v2',
         '3LPT_v3']:
@@ -827,7 +849,8 @@ def get_displacement_from_density_rfield(in_density_rfield,
             return np.where(k2 == 0.0, 0 * v, v / (k2))
 
         # get potential pot = delta/k^2
-        pot_k = density_rfield.r2c().apply(potential_transfer_function)
+        #pot_k = density_rfield.r2c().apply(potential_transfer_function)
+        pot_k = density_cfield.apply(potential_transfer_function)
         #print("pot_k head:\n", pot_k[:2,:2,:2])
 
         # apply smoothing
@@ -877,9 +900,14 @@ def get_displacement_from_density_rfield(in_density_rfield,
 
             # add 2nd order Psi on top of Zeldovich
 
+            if in_density_rfield is not None:
+                in_density_fieldmesh = FieldMesh(in_density_rfield)
+            else:
+                in_density_fieldmesh = FieldMesh(in_density_cfield)
+
             # compute G2
             G2_cfield = calc_quadratic_field(
-                base_field_mesh=FieldMesh(in_density_rfield),
+                base_field_mesh=in_density_fieldmesh,
                 quadfield='tidal_G2',
                 smoothing_of_base_field=smoothing).compute(mode='complex')
 

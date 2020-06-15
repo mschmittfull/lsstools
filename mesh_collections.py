@@ -2,7 +2,6 @@ from __future__ import print_function, division
 
 from collections import OrderedDict, namedtuple
 from copy import copy
-import cPickle
 import h5py
 import json
 import numpy as np

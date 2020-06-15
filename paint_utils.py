@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 
 from collections import OrderedDict
-import cPickle
 import glob
 from mpi4py import MPI
 import numpy as np
@@ -10,12 +9,15 @@ import random
 from scipy import interpolate as interp
 import sys
 
-from mesh_collections import RealGrid, ComplexGrid
+from lsstools.mesh_collections import RealGrid, ComplexGrid
 from nbodykit.source.catalog import HDFCatalog
 from nbodykit.source.mesh.bigfile import BigFileMesh
 from nbodykit import logging
 from nbodykit.source.mesh.field import FieldMesh
 from pmesh.pm import RealField, ComplexField
+from nbodykit import CurrentMPIComm
+from nbodykit.mpirng import MPIRandomState
+
 
 from nbkit03_utils import get_cmean, get_cstat, print_cstats
 from pm_utils import ltoc_index_arr, cgetitem_index_arr
@@ -430,6 +432,282 @@ def paint_cat_to_gridk(PaintGrid_config,
         return gridk
 
 
+def avg_value_mass_weighted_paint_cat_to_rho(
+    cat=None,
+    value_column=None,
+    weight_ptcles_by=None,
+    Ngrid=None,
+    fill_empty_cells='RandNeighb',
+    RandNeighbSeed=1234,
+    raise_exception_if_too_many_empty_cells=True,
+    to_mesh_kwargs=None,
+    verbose=False
+    ):
+    """
+    Helper function that paints cat[value_column] to grid, averaging over
+    values of all particles belonging to a cell, and allowing for 
+    additional particle mass weights. Also has several methods to fill empty
+    cells.
+    """
+    # In the code 'value' is called 'chi', because value is chi in reconstruction
+    # code.
+
+    if to_mesh_kwargs is None:
+        to_mesh_kwargs = {
+            'window': 'cic',
+            'compensated': False,
+            'interlaced': False}
+
+    comm = CurrentMPIComm.get()
+    logger = logging.getLogger('paint_utils')
+
+    ## Get mass density rho so we can normalize chi later. Assume mass=1, or given by
+    # weight_ptcles_by.
+    # This is to get avg chi if multiple ptcles are in same cell.
+    # 1 Sep 2017: Want chi_avg = sum_i m_i chi_i / sum_j m_i where m_i is particle mass,
+    # because particle mass says how much the average should be dominated by a single ptcle
+    # that can represent many original no-mass particles.
+
+    # Compute rho4chi = sum_i m_i
+    rho4chi, rho4chi_attrs = weighted_paint_cat_to_delta(
+        cat,
+        weight=weight_ptcles_by,
+        weighted_paint_mode='sum',
+        to_mesh_kwargs=to_mesh_kwargs,
+        normalize=False,  # want rho not 1+delta
+        Nmesh=Ngrid,
+        set_mean=None,
+        verbose=verbose)
+
+    # compute chi weighted by ptcle mass chi(x)m(x)
+    weighted_col = 'TMP weighted %s' % value_column
+    if weight_ptcles_by is not None:
+        cat[weighted_col] = cat[weight_ptcles_by] * cat[value_column]
+    else:
+        # weight 1 for each ptcle
+        cat[weighted_col] = cat[value_column]
+    thisChi, thisChi_attrs = weighted_paint_cat_to_delta(
+        cat,
+        weight=weighted_col,  # chi weighted by ptcle mass
+        weighted_paint_mode='sum',
+        to_mesh_kwargs=to_mesh_kwargs,
+        normalize=False,  # want rho not 1+delta (TODO: check)
+        Nmesh=Ngrid,
+        set_mean=None,
+        verbose=verbose)
+
+    # Normalize Chi by dividing by rho: So far, our chi will get larger if there are
+    # more particles, because it sums up displacements over all particles.
+    # To normalize, divide by rho (=mass density on grid if all ptcles have mass m=1,
+    # or mass given by weight_ptcles_by).
+    # (i.e. divide by number of contributions to a cell)
+    if fill_empty_cells in [None, 'SetZero']:
+        # Set chi=0 if there are not ptcles in grid cell. Used until 7 April 2017.
+        # Seems ok for correl coeff and BAO, but gives large-scale bias in transfer
+        # function or broad-band power because violates mass conservation.
+        raise Exception('Possible bug: converting to np array only uses root rank?')
+        thisChi = FieldMesh(
+            np.where(
+                rho4chi.compute(mode='real') == 0,
+                rho4chi.compute(mode='real') * 0,
+                thisChi.compute(mode='real') /
+                rho4chi.compute(mode='real')))
+        #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0, thisChi/gridx.G['rho4chi'])
+
+    elif fill_empty_cells in [
+        'RandNeighb', 'RandNeighbReadout', 'AvgAndRandNeighb']:
+
+        # Set chi in empty cells equal to a random neighbor cell. Do this until all empty
+        # cells are filled.
+        # First set all empty cells to nan.
+        #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0+np.nan, thisChi/gridx.G['rho4chi'])
+        thisChi = thisChi / rho4chi  # get nan when rho4chi=0
+        if True:
+            # test if nan ok
+            ww1 = np.where(rho4chi == 0)
+            #ww2 = np.where(np.isnan(thisChi.compute(mode='real')))
+            ww2 = np.where(np.isnan(thisChi))
+            assert np.allclose(ww1, ww2)
+            del ww1, ww2
+
+        # Progressively replace nan by random neighbors:
+        Ng = Ngrid
+        #thisChi = thisChi.reshape((Ng,Ng,Ng))
+        logger.info('thisChi.shape: %s' % str(thisChi.shape))
+        #assert thisChi.shape == (Ng,Ng,Ng)
+        # indices of empty cells on this rank
+        ww = np.where(np.isnan(thisChi))
+        # number of empty cells across all ranks
+        Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
+        have_empty_cells = (Nfill > 0)
+
+        if fill_empty_cells in ['RandNeighb', 'RandNeighbReadout']:
+            i_iter = -1
+            while have_empty_cells:
+                i_iter += 1
+                if comm.rank == 0:
+                    logger.info(
+                        "Fill %d empty chi cells (%g percent) using random neighbors"
+                        % (Nfill, Nfill / float(Ng)**3 * 100.))
+                if Nfill / float(Ng)**3 >= 0.999:
+                    if raise_exception_if_too_many_empty_cells:
+                        raise Exception(
+                            "Stop because too many empty chi cells")
+                    else:
+                        logger.warning(
+                            "More than 99.9 percent of cells are empty")
+                # draw -1,0,+1 for each empty cell, in 3 directions
+                # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
+                rng = MPIRandomState(comm,
+                                     seed=RandNeighbSeed + i_iter * 100,
+                                     size=ww[0].shape[0],
+                                     chunksize=100000)
+                r = rng.uniform(low=-2, high=2, dtype='int', itemshape=(3,))
+                assert np.all(r >= -1)
+                assert np.all(r <= 1)
+
+                # Old serial code to replace nan by random neighbors.
+                # thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
+
+                if fill_empty_cells == 'RandNeighbReadout':
+                    # New parallel code, 1st implementation.
+                    # Use readout to get field at positions [(ww+rank_offset+r)%Ng] dx.
+                    BoxSize = cat.attrs['BoxSize']
+                    dx = BoxSize / (float(Ng))
+                    #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
+                    # more carefully:
+                    pos_wanted = np.zeros((ww[0].shape[0], 3)) + np.nan
+                    for idir in [0, 1, 2]:
+                        pos_wanted[:, idir] = (
+                            (np.array(ww[idir] + thisChi.start[idir]) +
+                             r[:, idir]) %
+                            Ng) * dx[idir]  # ranges from 0..BoxSize
+
+                    # use readout to get neighbors
+                    readout_window = 'nnb'
+                    layout = thisChi.pm.decompose(pos_wanted,
+                                                  smoothing=readout_window)
+                    # interpolate field to particle positions (use pmesh 'readout' function)
+                    thisChi_neighbors = thisChi.readout(
+                        pos_wanted, resampler=readout_window, layout=layout)
+                    if False:
+                        # print dbg info
+                        for ii in range(10000, 10004):
+                            if comm.rank == 1:
+                                logger.info(
+                                    'chi manual neighbor: %g' %
+                                    thisChi[(ww[0][ii] + r[ii, 0]) % Ng,
+                                            (ww[1][ii] + r[ii, 1]) % Ng,
+                                            (ww[2][ii] + r[ii, 2]) % Ng])
+                                logger.info('chi readout neighbor: %g' %
+                                            thisChi_neighbors[ii])
+                    thisChi[ww] = thisChi_neighbors
+
+                elif fill_empty_cells == 'RandNeighb':
+                    # New parallel code, 2nd implementation.
+                    # Use collective getitem and only work with indices.
+                    # http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.Field.cgetitem.
+
+                    # Note ww are indices of local slab, need to convert to global indices.
+                    thisChi_neighbors = None
+                    my_cindex_wanted = None
+                    for root in range(comm.size):
+                        # bcast to all ranks b/c must call cgetitem collectively with same args on each rank
+                        if comm.rank == root:
+                            # convert local index to collective index using ltoc which gives 3 tuple
+                            assert len(ww) == 3
+                            wwarr = np.array(ww).transpose()
+
+                            #cww = np.array([
+                            #    ltoc(field=thisChi, index=[ww[0][i],ww[1][i],ww[2][i]])
+                            #    for i in range(ww[0].shape[0]) ])
+                            cww = ltoc_index_arr(field=thisChi,
+                                                 lindex_arr=wwarr)
+                            #logger.info('cww: %s' % str(cww))
+
+                            #my_cindex_wanted = [(cww[:,0]+r[:,0])%Ng, (cww[1][:]+r[:,1])%Ng, (cww[2][:]+r[:,2])%Ng]
+                            my_cindex_wanted = (cww + r) % Ng
+                            #logger.info('my_cindex_wanted: %s' % str(my_cindex_wanted))
+                        cindex_wanted = comm.bcast(my_cindex_wanted,
+                                                   root=root)
+                        glob_thisChi_neighbors = cgetitem_index_arr(
+                            thisChi, cindex_wanted)
+
+                        # slower version doing the same
+                        # glob_thisChi_neighbors = [
+                        #     thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]])
+                        #     for i in range(cindex_wanted.shape[0]) ]
+
+                        if comm.rank == root:
+                            thisChi_neighbors = np.array(
+                                glob_thisChi_neighbors)
+                        #thisChi_neighbors = thisChi.cgetitem([40,42,52])
+
+                    #print('thisChi_neighbors:', thisChi_neighbors)
+
+                    if False:
+                        # print dbg info (rank 0 ok, rank 1 fails to print)
+                        for ii in range(11000, 11004):
+                            if comm.rank == 1:
+                                logger.info(
+                                    'ww: %s' %
+                                    str([ww[0][ii], ww[1][ii], ww[2][ii]]))
+                                logger.info(
+                                    'chi[ww]: %g' %
+                                    thisChi[ww[0][ii], ww[1][ii], ww[2][ii]]
+                                )
+                                logger.info(
+                                    'chi manual neighbor: %g' %
+                                    thisChi[(ww[0][ii] + r[ii, 0]) % Ng,
+                                            (ww[1][ii] + r[ii, 1]) % Ng,
+                                            (ww[2][ii] + r[ii, 2]) % Ng])
+                                logger.info('chi bcast neighbor: %g' %
+                                            thisChi_neighbors[ii])
+                        raise Exception('just dbg')
+                    thisChi[ww] = thisChi_neighbors
+
+                ww = np.where(np.isnan(thisChi))
+                Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
+                have_empty_cells = (Nfill > 0)
+                comm.barrier()
+
+        elif fill_empty_cells == 'AvgAndRandNeighb':
+            raise NotImplementedError
+            # while have_empty_cells:
+            #     print("Fill %d empty chi cells (%g percent) using avg and random neighbors" % (
+            #         ww[0].shape[0],ww[0].shape[0]/float(Ng)**3*100.))
+            #     # first take average (only helps empty cells surrounded by filled cells)
+            #     thisChi[ww[0],ww[1],ww[2]] = 0.0
+            #     for r0 in range(-1,2):
+            #         for r1 in range(-1,2):
+            #             for r2 in range(-1,2):
+            #                 if (r0==0) and (r1==0) and (r2==0):
+            #                     # do not include center point in avg b/c this is nan
+            #                     continue
+            #                 else:
+            #                     # average over 27-1 neighbor points
+            #                     thisChi[ww[0],ww[1],ww[2]] += thisChi[(ww[0]+r0)%Ng, (ww[1]+r1)%Ng, (ww[2]+r2)%Ng]/26.0
+            #     # get indices of cells that are still empty (happens if a neighbor was nan above)
+            #     ww = np.where(np.isnan(thisChi))
+            #     have_empty_cells = (ww[0].shape[0] > 0)
+            #     if have_empty_cells:
+            #         # draw -1,0,+1 for each empty cell, in 3 directions
+            #         r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
+            #         # replace nan by random neighbors
+            #         thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
+            #         # recompute indices of nan cells
+            #         ww = np.where(np.isnan(thisChi))
+            #         have_empty_cells = (ww[0].shape[0] > 0)
+
+    else:
+        raise Exception("Invalid fill_empty_cells option: %s" %
+                        str(fill_empty_cells))
+
+    return thisChi, thisChi_attrs
+
+
+
+
 def paint_chicat_to_gridx(chi_cols=None,
                           cat=None,
                           gridx=None,
@@ -444,6 +722,8 @@ def paint_chicat_to_gridx(chi_cols=None,
                           kmax=None,
                           raise_exception_if_too_many_empty_cells=True):
     """
+    Deprecated. Should use avg_value_mass_weighted_paint_cat_to_rho instead.
+    
     Helper function that reads in displacement field 'chi_col_{0,1,2}' from catalog
     and paints it to a regular grid. 
     The result is stored in gridx.G['chi_col_{0,1,2}'].
@@ -458,256 +738,24 @@ def paint_chicat_to_gridx(chi_cols=None,
             but slower b/c of manual MPI communication).
         - 'AvgAndRandNeighb': Not implemented in parallel version.
     """
-    from nbodykit import CurrentMPIComm
-    from nbodykit.mpirng import MPIRandomState
-
-    comm = CurrentMPIComm.get()
-    logger = logging.getLogger('paint_utils')
-
-    # Read catalog
-    #cat = read_ms_hdf5_catalog(cat_fname)
-
-    ## Get mass density rho so we can normalize chi later. Assume mass=1, or given by
-    # weight_ptcles_by.
-    # This is to get avg chi if multiple ptcles are in same cell.
-    # 1 Sep 2017: Want chi_avg = sum_i m_i chi_i / sum_j m_i where m_i is particle mass,
-    # because particle mass says how much the average should be dominated by a single ptcle
-    # that can represent many original no-mass particles.
-
-    # Compute rho4chi = sum_i m_i
-    rho4chi, rho4chi_attrs = weighted_paint_cat_to_delta(
-        cat,
-        weight=weight_ptcles_by,
-        weighted_paint_mode='sum',
-        normalize=False,  # want rho not 1+delta
-        Nmesh=Ngrid,
-        set_mean=None)
+    
 
     ## Paint chi to grid using nbodykit. Do usual painting of particles to grid, but
     # use chi component as weight.
     # This should give rho(x)chi(x) = sum_i m_i chi(x_i) where m_i is ptcle mass.
     for chi_col in chi_cols:
         print("Paint chi %s" % chi_col)
-        # compute chi weighted by ptcle mass chi(x)m(x)
-        weighted_col = 'TMP weighted %s' % chi_col
-        if weight_ptcles_by is not None:
-            cat[weighted_col] = cat[weight_ptcles_by] * cat[chi_col]
-        else:
-            # weight 1 for each ptcle
-            cat[weighted_col] = cat[chi_col]
-        thisChi, thisChi_attrs = weighted_paint_cat_to_delta(
-            cat,
-            weight=weighted_col,  # chi weighted by ptcle mass
-            weighted_paint_mode='sum',
-            normalize=False,  # want rho not 1+delta (TODO: check)
-            Nmesh=Ngrid,
-            set_mean=None)
 
-        # Normalize Chi by dividing by rho: So far, our chi will get larger if there are
-        # more particles, because it sums up displacements over all particles.
-        # To normalize, divide by rho (=mass density on grid if all ptcles have mass m=1).
-        # (i.e. divide by number of contributions to a cell)
-        if fill_empty_chi_cells in [None, 'SetZero']:
-            # Set chi=0 if there are not ptcles in grid cell. Used until 7 April 2017.
-            # Seems ok for correl coeff and BAO, but gives large-scale bias in transfer
-            # function or broad-band power because violates mass conservation.
-            raise Exception('Possible bug: converting to np array only uses root rank?')
-            thisChi = FieldMesh(
-                np.where(
-                    rho4chi.compute(mode='real') == 0,
-                    rho4chi.compute(mode='real') * 0,
-                    thisChi.compute(mode='real') /
-                    rho4chi.compute(mode='real')))
-            #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0, thisChi/gridx.G['rho4chi'])
-
-        elif fill_empty_chi_cells in [
-                'RandNeighb', 'RandNeighbReadout', 'AvgAndRandNeighb'
-        ]:
-            # Set chi in empty cells equal to a random neighbor cell. Do this until all empty
-            # cells are filled.
-            # First set all empty cells to nan.
-            #thisChi = np.where(gridx.G['rho4chi']==0, thisChi*0+np.nan, thisChi/gridx.G['rho4chi'])
-            thisChi = thisChi / rho4chi  # get nan when rho4chi=0
-            if True:
-                # test if nan ok
-                ww1 = np.where(rho4chi == 0)
-                #ww2 = np.where(np.isnan(thisChi.compute(mode='real')))
-                ww2 = np.where(np.isnan(thisChi))
-                assert np.allclose(ww1, ww2)
-                del ww1, ww2
-
-            # Progressively replace nan by random neighbors:
-            Ng = Ngrid
-            #thisChi = thisChi.reshape((Ng,Ng,Ng))
-            logger.info('thisChi.shape: %s' % str(thisChi.shape))
-            #assert thisChi.shape == (Ng,Ng,Ng)
-            # indices of empty cells on this rank
-            ww = np.where(np.isnan(thisChi))
-            # number of empty cells across all ranks
-            Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
-            have_empty_cells = (Nfill > 0)
-
-            if fill_empty_chi_cells in ['RandNeighb', 'RandNeighbReadout']:
-                i_iter = -1
-                while have_empty_cells:
-                    i_iter += 1
-                    if comm.rank == 0:
-                        logger.info(
-                            "Fill %d empty chi cells (%g percent) using random neighbors"
-                            % (Nfill, Nfill / float(Ng)**3 * 100.))
-                    if Nfill / float(Ng)**3 >= 0.999:
-                        if raise_exception_if_too_many_empty_cells:
-                            raise Exception(
-                                "Stop because too many empty chi cells")
-                        else:
-                            logger.warning(
-                                "More than 99.9 percent of cells are empty")
-                    # draw -1,0,+1 for each empty cell, in 3 directions
-                    # r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
-                    rng = MPIRandomState(comm,
-                                         seed=RandNeighbSeed + i_iter * 100,
-                                         size=ww[0].shape[0],
-                                         chunksize=100000)
-                    r = rng.uniform(low=-2, high=2, dtype='int', itemshape=(3,))
-                    assert np.all(r >= -1)
-                    assert np.all(r <= 1)
-
-                    # Old serial code to replace nan by random neighbors.
-                    # thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
-
-                    if fill_empty_chi_cells == 'RandNeighbReadout':
-                        # New parallel code, 1st implementation.
-                        # Use readout to get field at positions [(ww+rank_offset+r)%Ng] dx.
-                        BoxSize = cat.attrs['BoxSize']
-                        dx = BoxSize / (float(Ng))
-                        #pos_wanted = ((np.array(ww).transpose() + r) % Ng) * dx   # ranges from 0 to BoxSize
-                        # more carefully:
-                        pos_wanted = np.zeros((ww[0].shape[0], 3)) + np.nan
-                        for idir in [0, 1, 2]:
-                            pos_wanted[:, idir] = (
-                                (np.array(ww[idir] + thisChi.start[idir]) +
-                                 r[:, idir]) %
-                                Ng) * dx[idir]  # ranges from 0..BoxSize
-
-                        # use readout to get neighbors
-                        readout_window = 'nnb'
-                        layout = thisChi.pm.decompose(pos_wanted,
-                                                      smoothing=readout_window)
-                        # interpolate field to particle positions (use pmesh 'readout' function)
-                        thisChi_neighbors = thisChi.readout(
-                            pos_wanted, resampler=readout_window, layout=layout)
-                        if False:
-                            # print dbg info
-                            for ii in range(10000, 10004):
-                                if comm.rank == 1:
-                                    logger.info(
-                                        'chi manual neighbor: %g' %
-                                        thisChi[(ww[0][ii] + r[ii, 0]) % Ng,
-                                                (ww[1][ii] + r[ii, 1]) % Ng,
-                                                (ww[2][ii] + r[ii, 2]) % Ng])
-                                    logger.info('chi readout neighbor: %g' %
-                                                thisChi_neighbors[ii])
-                        thisChi[ww] = thisChi_neighbors
-
-                    elif fill_empty_chi_cells == 'RandNeighb':
-                        # New parallel code, 2nd implementation.
-                        # Use collective getitem and only work with indices.
-                        # http://rainwoodman.github.io/pmesh/pmesh.pm.html#pmesh.pm.Field.cgetitem.
-
-                        # Note ww are indices of local slab, need to convert to global indices.
-                        thisChi_neighbors = None
-                        my_cindex_wanted = None
-                        for root in range(comm.size):
-                            # bcast to all ranks b/c must call cgetitem collectively with same args on each rank
-                            if comm.rank == root:
-                                # convert local index to collective index using ltoc which gives 3 tuple
-                                assert len(ww) == 3
-                                wwarr = np.array(ww).transpose()
-
-                                #cww = np.array([
-                                #    ltoc(field=thisChi, index=[ww[0][i],ww[1][i],ww[2][i]])
-                                #    for i in range(ww[0].shape[0]) ])
-                                cww = ltoc_index_arr(field=thisChi,
-                                                     lindex_arr=wwarr)
-                                #logger.info('cww: %s' % str(cww))
-
-                                #my_cindex_wanted = [(cww[:,0]+r[:,0])%Ng, (cww[1][:]+r[:,1])%Ng, (cww[2][:]+r[:,2])%Ng]
-                                my_cindex_wanted = (cww + r) % Ng
-                                #logger.info('my_cindex_wanted: %s' % str(my_cindex_wanted))
-                            cindex_wanted = comm.bcast(my_cindex_wanted,
-                                                       root=root)
-                            glob_thisChi_neighbors = cgetitem_index_arr(
-                                thisChi, cindex_wanted)
-
-                            # slower version doing the same
-                            # glob_thisChi_neighbors = [
-                            #     thisChi.cgetitem([cindex_wanted[i,0], cindex_wanted[i,1], cindex_wanted[i,2]])
-                            #     for i in range(cindex_wanted.shape[0]) ]
-
-                            if comm.rank == root:
-                                thisChi_neighbors = np.array(
-                                    glob_thisChi_neighbors)
-                            #thisChi_neighbors = thisChi.cgetitem([40,42,52])
-
-                        #print('thisChi_neighbors:', thisChi_neighbors)
-
-                        if False:
-                            # print dbg info (rank 0 ok, rank 1 fails)
-                            for ii in range(11000, 11004):
-                                if comm.rank == 1:
-                                    logger.info(
-                                        'ww: %s' %
-                                        str([ww[0][ii], ww[1][ii], ww[2][ii]]))
-                                    logger.info(
-                                        'chi[ww]: %g' %
-                                        thisChi[ww[0][ii], ww[1][ii], ww[2][ii]]
-                                    )
-                                    logger.info(
-                                        'chi manual neighbor: %g' %
-                                        thisChi[(ww[0][ii] + r[ii, 0]) % Ng,
-                                                (ww[1][ii] + r[ii, 1]) % Ng,
-                                                (ww[2][ii] + r[ii, 2]) % Ng])
-                                    logger.info('chi bcast neighbor: %g' %
-                                                thisChi_neighbors[ii])
-                            raise Exception('just dbg')
-                        thisChi[ww] = thisChi_neighbors
-
-                    ww = np.where(np.isnan(thisChi))
-                    Nfill = comm.allreduce(ww[0].shape[0], op=MPI.SUM)
-                    have_empty_cells = (Nfill > 0)
-                    comm.barrier()
-
-            elif fill_empty_chi_cells == 'AvgAndRandNeighb':
-                raise Exception('Not implemented any more')
-                # while have_empty_cells:
-                #     print("Fill %d empty chi cells (%g percent) using avg and random neighbors" % (
-                #         ww[0].shape[0],ww[0].shape[0]/float(Ng)**3*100.))
-                #     # first take average (only helps empty cells surrounded by filled cells)
-                #     thisChi[ww[0],ww[1],ww[2]] = 0.0
-                #     for r0 in range(-1,2):
-                #         for r1 in range(-1,2):
-                #             for r2 in range(-1,2):
-                #                 if (r0==0) and (r1==0) and (r2==0):
-                #                     # do not include center point in avg b/c this is nan
-                #                     continue
-                #                 else:
-                #                     # average over 27-1 neighbor points
-                #                     thisChi[ww[0],ww[1],ww[2]] += thisChi[(ww[0]+r0)%Ng, (ww[1]+r1)%Ng, (ww[2]+r2)%Ng]/26.0
-                #     # get indices of cells that are still empty (happens if a neighbor was nan above)
-                #     ww = np.where(np.isnan(thisChi))
-                #     have_empty_cells = (ww[0].shape[0] > 0)
-                #     if have_empty_cells:
-                #         # draw -1,0,+1 for each empty cell, in 3 directions
-                #         r = np.random.randint(-1,2, size=(ww[0].shape[0],3), dtype='int')
-                #         # replace nan by random neighbors
-                #         thisChi[ww[0],ww[1],ww[2]] = thisChi[(ww[0]+r[:,0])%Ng, (ww[1]+r[:,1])%Ng, (ww[2]+r[:,2])%Ng]
-                #         # recompute indices of nan cells
-                #         ww = np.where(np.isnan(thisChi))
-                #         have_empty_cells = (ww[0].shape[0] > 0)
-
-        else:
-            raise Exception("Invalid fill_empty_chi_cells option: %s" %
-                            str(fill_empty_chi_cells))
+        thisChi, thisChi_attrs = avg_value_mass_weighted_paint_cat_to_rho(
+            cat=cat,
+            value_column=chi_col,
+            weight_ptcles_by=weight_ptcles_by,
+            Ngrid=Ngrid,
+            fill_empty_cells=fill_empty_chi_cells,
+            RandNeighbSeed=RandNeighbSeed,
+            raise_exception_if_too_many_empty_cells=(
+                raise_exception_if_too_many_empty_cells)
+            )
 
         # Save as RealGrid entry.
         if gridx is None:
@@ -736,7 +784,8 @@ def paint_chicat_to_gridx(chi_cols=None,
         if do_plot:
             gridx.plot_slice(chi_col, 'slice4chi_%s.pdf' % chi_col)
 
-    gridx.drop_column('rho4chi')
+    if gridx.has_column('rho4chi'):
+        gridx.drop_column('rho4chi')
     # output is stored in gridx.G['chi_col_{0,1,2}'], nothing to return.
 
     return gridx
@@ -768,7 +817,7 @@ def weighted_paint_cat_to_delta(cat,
     mass_weighted_paint_cat_to_delta below is a bit cleaner so better use that.
     """
 
-    print('MYDBG to_mesh_kwargs:', to_mesh_kwargs)
+    #print('MYDBG to_mesh_kwargs:', to_mesh_kwargs)
 
     if weighted_paint_mode not in ['sum', 'avg']:
         raise Exception("Invalid weighted_paint_mode %s" % weighted_paint_mode)
@@ -862,14 +911,17 @@ def mass_weighted_paint_cat_to_delta(cat,
                                 verbose=verbose)
     cmean = get_cmean(delta)
     #cmean = delta.cmean()
-    print('mean0:', cmean)
+    if verbose:
+        print('mean0:', cmean)
     if np.abs(cmean<1e-5):
         print('WARNING: dividing by small number when dividing by mean')
     delta /= cmean
-    print('mean1:', get_cmean(delta))
+    if verbose:
+        print('mean1:', get_cmean(delta))
     delta -= get_cmean(delta)
     delta += set_mean
-    print('mean2:', get_cmean(delta))
+    if verbose:
+        print('mean2:', get_cmean(delta))
     if weight is None:
         print_cstats(delta, prefix='delta: ')
     else:
@@ -924,7 +976,8 @@ def mass_avg_weighted_paint_cat_to_rho(cat,
 
     cmean = get_cmean(rho_ratio)
     #cmean = delta.cmean()
-    print('mean0:', cmean)
+    if verbose:
+        print('mean0:', cmean)
     if False:
         if np.abs(cmean<1e-5):
             print('WARNING: dividing by small number when dividing by mean')
@@ -933,7 +986,8 @@ def mass_avg_weighted_paint_cat_to_rho(cat,
         rho_ratio -= get_cmean(rho_ratio)
         rho_ratio += set_mean
         print('mean2:', get_cmean(rho_ratio))
-    print_cstats(rho_ratio, prefix='mass avg-weighted catalog: ')
+    if verbose:
+        print_cstats(rho_ratio, prefix='mass avg-weighted catalog: ')
     return rho_ratio, attrs
 
 

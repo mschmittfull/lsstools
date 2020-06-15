@@ -558,4 +558,22 @@ class MSGadgetSimOpts(SimOpts):
                          ]
                     )
 
+                if True:
+                    # god sample
+                    assert RSD_los in [None, [0,0,1]]
+                    cats['delta_gPTC%s_GodPsiDot1' % RSDstring] = Target(
+                        name='delta_gPTC%s_GodPsiDot1' % RSDstring,
+                        in_fname='snap_%.4f.gadget3/rockstar_out_0.list.bigfile_RESID_PsiDot1_D2.bf' % (
+                            self.sim_scale_factor),
+                        position_column='Position',
+                        velocity_column='Velocity', 
+                        apply_RSD_to_position=apply_RSD_to_position,
+                        RSD_los=RSD_los,
+                        RSDFactor=RSDFactor_rockstar, # to convert velocity to RSD displacement in Mpc/h
+                        cuts=[PTChallengeGalaxiesFromRockstarHalos(
+                                log10M_column='log10Mvir', log10Mmin=12.97, sigma_log10M=0.35, RSD=False),
+                              ('residual_D2', 'max', 2.0)
+                             ]
+                        )
+
         return cats
