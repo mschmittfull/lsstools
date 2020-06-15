@@ -23,8 +23,8 @@ from lsstools.cosmo_model import CosmoModel
 from lsstools.gen_cosmo_fcns import calc_f_log_growth_rate, generate_calc_Da
 from lsstools.model_spec import get_trf_spec_from_list
 from lsstools.paint_utils import mass_weighted_paint_cat_to_delta
-from lsstools.results_db import retrieve_pickles
-from lsstools.results_db.io import Pickler
+#from lsstools.results_db import retrieve_pickles
+#from lsstools.results_db.io import Pickler
 from perr.path_utils import get_in_path
 from lsstools.nbkit03_utils import get_csum, get_csqsum, apply_smoothing, catalog_persist, get_cstats_string, linear_rescale_fac, get_crms,convert_nbk_cat_to_np_array
 from perr_private.model_target_pair import ModelTargetPair, Model, Target
@@ -44,7 +44,8 @@ from perr_private.read_utils import readout_mesh_at_cat_pos
 
 # path
 sim_seed = 400
-basedir = '/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
+#basedir = '/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
+basedir = '/data/mschmittfull/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
 sim_scale_factor = 0.625
 
 # cosmology of ms_gadget sims (to compute D_lin(z))
@@ -99,7 +100,7 @@ DM_D0 = Target(
 assert sim_scale_factor == 0.625
 gal_ptchall_D0 = Target(
     name='gal_ptchall_D0',
-    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.parents.bigfile' % sim_scale_factor),
+    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % sim_scale_factor),
     position_column='Position',
     val_column='Velocity', # This is rockstar velocity, which is v=a\dot x in km/s ("Velocities in km / s (physical, peculiar)")
     val_component=0,
@@ -111,7 +112,7 @@ gal_ptchall_D0 = Target(
     )
 gal_ptchall_D2 = Target(
     name='gal_ptchall_D2',
-    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.parents.bigfile' % sim_scale_factor),
+    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % sim_scale_factor),
     position_column='Position',
     val_column='Velocity', # This is rockstar velocity, which is v=a\dot x in km/s ("Velocities in km / s (physical, peculiar)")
     val_component=2,
@@ -126,7 +127,7 @@ gal_ptchall_D2 = Target(
 assert sim_scale_factor == 0.625
 gal_ptchall_subbox_D0 = Target(
     name='gal_ptchall_D0',
-    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.parents.bigfile' % sim_scale_factor),
+    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % sim_scale_factor),
     position_column='Position',
     val_column='Velocity', # This is rockstar velocity, which is v=a\dot x in km/s ("Velocities in km / s (physical, peculiar)")
     val_component=0,
@@ -142,7 +143,7 @@ gal_ptchall_subbox_D0 = Target(
 assert sim_scale_factor == 0.625
 gal_ptchall_subbox_D0_RSDtest = Target(
     name='gal_ptchall_D0_RSDtest',
-    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.parents.bigfile' % sim_scale_factor),
+    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % sim_scale_factor),
     position_column='Position',
     velocity_column='Velocity', 
     apply_RSD_to_position=True,
@@ -161,7 +162,7 @@ gal_ptchall_subbox_D0_RSDtest = Target(
 assert sim_scale_factor == 0.625
 gal_ptchall_subbox_D1 = Target(
     name='gal_ptchall_D1',
-    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.parents.bigfile' % sim_scale_factor),
+    in_fname=os.path.join(basedir, 'snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % sim_scale_factor),
     position_column='Position',
     val_column='Velocity', # This is rockstar velocity, which is v=a\dot x in km/s ("Velocities in km / s (physical, peculiar)")
     val_component=1,
