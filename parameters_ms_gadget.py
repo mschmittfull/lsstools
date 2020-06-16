@@ -570,8 +570,7 @@ class MSGadgetSimOpts(SimOpts):
                         apply_RSD_to_position=apply_RSD_to_position,
                         RSD_los=RSD_los,
                         RSDFactor=RSDFactor_rockstar, # to convert velocity to RSD displacement in Mpc/h
-                        cuts=[PTChallengeGalaxiesFromRockstarHalos(
-                                log10M_column='log10Mvir', log10Mmin=12.97, sigma_log10M=0.35, RSD=False),
+                        cuts=[('residual_D2', 'min', -2.0),  # script already applied galaxy selection, only need to cut on residual
                               ('residual_D2', 'max', 2.0)
                              ]
                         )
