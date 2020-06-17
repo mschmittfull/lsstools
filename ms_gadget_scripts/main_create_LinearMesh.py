@@ -19,6 +19,12 @@ def main():
 
     See http://nbodykit.readthedocs.io/en/latest/api/_autosummary/nbodykit.source.mesh.linear.html?highlight=linearmesh#nbodykit.source.mesh.linear.LinearMesh
     for documenation.
+
+    To run on helios:
+    salloc --exclusive --nodes=1 --time=01:00:00
+    ssh nodeXY.hpc.sns.ias.edu
+    cd ~/CODE/lsstools/ms_gadget_scripts
+    srun -n 14 python main_create_LinearMesh.py 400 1536
     """
 
     # read command line arguments
@@ -32,7 +38,7 @@ def main():
     
     
     ### OPTIONS
-    boxsize = 500.0
+    boxsize = 1500.0
     Nptcles_per_dim_for_out_dir = 1536  # only used to get name of output folder
     Plin_fname = '/home/mschmittfull/CODE/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_z0.dat'
     

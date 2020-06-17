@@ -23,5 +23,5 @@ mv out_0.list rockstar_out_0.list
 
 # also get parent/subhalo information
 make parents
-cd /scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-500.0-wig/snap_0.6250.gadget3/
-/home/mschmittfull/CODE/EXTERNAL/rockstar_marcel/util/find_parents rockstar_out_0.list 500.0 > rockstar_out_0.list.parents
+cd /scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-1500.0-wig/snap_0.6250.gadget3/
+/home/mschmittfull/CODE/EXTERNAL/rockstar_marcel/util/find_parents rockstar_out_0.list 1500.0 > rockstar_out_0.list.parents
