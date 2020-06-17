@@ -41,7 +41,7 @@ echo "Convert bigfile to gadget3"
 for SimSeed in 400
 do
     #InFile="/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_000"
-    InFile="/data/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_0.6250"
+    InFile="/scratch/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-0$Np-1500.0-wig/snap_0.6250"
     OutFile="$InFile.gadget3/"
 
     echo "InFile: $InFile"
