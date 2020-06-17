@@ -9,12 +9,13 @@ salloc --nodes=3 --time 01:00:00 --exclusive
 ssh nodeXY.hpc.sns.ias.edu
 
 # start server. This generates OUTBASE/auto-rockstar.cfg
-./rockstar -c ms_gadget.cfg 
+cd ~/CODE/EXTERNAL/rockstar_marcel
+./rockstar -c 000_marcel_scripts/ms_gadget.cfg_L1500
 
 # start processes (use the generated auto-rockstar.cfg)
 # login to all 3 nodes we have and run (REPLACE SEED!)
 # should run on scratch b/c faster than data
-~/CODE/EXTERNAL/rockstar_marcel/rockstar -c /data/mschmittfull/lss/ms_gadget/run4/00000404-01536-500.0-wig/snap_0.6250.gadget3/auto-rockstar.cfg
+~/CODE/EXTERNAL/rockstar_marcel/rockstar -c /scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-1500.0-wig/snap_0.6250.gadget3/auto-rockstar.cfg
 
 # watch output on master node
 

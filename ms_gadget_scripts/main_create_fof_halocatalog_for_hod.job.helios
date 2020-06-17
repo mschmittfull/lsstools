@@ -29,7 +29,7 @@ simseed=400
 simsnap=0.6250
 # use 24 to cut at 25
 nminptcles=24
-withpeak=0
+withpeak=1
 
 
 
