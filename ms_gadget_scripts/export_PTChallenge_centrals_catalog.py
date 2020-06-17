@@ -43,9 +43,9 @@ from perr_private.read_utils import readout_mesh_at_cat_pos
 
 
 # path
-sim_seed = 400
+sim_seed = 404
 #basedir = '/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
-basedir = '/data/mschmittfull/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
+basedir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
 sim_scale_factor = 0.625
 
 # cosmology of ms_gadget sims (to compute D_lin(z))
@@ -419,7 +419,8 @@ print(cat.columns)
 # In[5]:
 
 
-cat.attrs
+print('cat attrs:')
+print(cat.attrs)
 
 
 # In[ ]:
