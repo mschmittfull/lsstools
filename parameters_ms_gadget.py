@@ -75,7 +75,7 @@ class MSGadgetSimOpts(SimOpts):
         if RSDstrings is None:
             RSDstrings = [('','')]
 
-        if True:
+        if False:
             # Linear density (ICs of the sims).
             # This is deltalin from mesh (created on mesh, without particles).
             # This has no RSD.
@@ -120,7 +120,7 @@ class MSGadgetSimOpts(SimOpts):
                 0.0
             }
 
-        if True:
+        if False:
             # deltanonl painted from all 1536^3 DM particles (includes CIC
             # artifacts, small shot noise).
             # This has no RSD.
