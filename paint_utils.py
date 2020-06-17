@@ -273,13 +273,15 @@ def paint_cat_to_gridk(PaintGrid_config,
         normalize = PaintGrid_config['Painter'].get('normalize', True)
         if normalize:
             cmean = outfield.cmean()
-            if np.abs(cmean < 1e-6):
-                raise Exception(
-                    'Found cmean=%g. Are you sure you want to normalize?' %
-                    cmean)
-            outfield.apply(lambda x, v: v / cmean,
-                           kind="relative",
-                           out=outfield)
+            if np.abs(cmean) < 1e-6:
+                #raise Exception(
+                #    'Found cmean=%g. Are you sure you want to normalize?' %
+                #    cmean)
+                print('WARNING: Found cmean=%g, not normalizing by mean' % cmean)
+            else:
+                outfield.apply(lambda x, v: v / cmean,
+                               kind="relative",
+                               out=outfield)
 
         #raise Exception('todo: normalize manually')
     else:
