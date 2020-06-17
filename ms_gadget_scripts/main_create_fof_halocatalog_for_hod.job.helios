@@ -29,12 +29,12 @@ simseed=400
 simsnap=0.6250
 # use 24 to cut at 25
 nminptcles=24
-withpeak=1
+withpeak=0
 
 
 
-indir="/data/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/snap_$simsnap"
-outdir="/data/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-500.0-wig/nbkit_fof_$simsnap"
+indir="/scratch/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-1500.0-wig/snap_$simsnap"
+outdir="/scratch/mschmittfull/lss/ms_gadget/run4/00000$simseed-01536-1500.0-wig/nbkit_fof_$simsnap"
 
 
 conda activate nbodykit-0.3.7-env
