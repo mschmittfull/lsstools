@@ -21,7 +21,7 @@ class MSGadgetSimOpts(SimOpts):
     def load_default_opts(**kwargs):
         """See parent class.
         """
-        # L=500 ms_gadget sims produced with MP-Gadget, 1536^3 particles,
+        # L=500,1500 ms_gadget sims produced with MP-Gadget, 1536^3 particles,
         # 64^3 test data.
         default = {}
         default['sim_name'] = 'ms_gadget'
