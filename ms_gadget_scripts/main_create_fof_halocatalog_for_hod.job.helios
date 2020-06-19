@@ -12,7 +12,7 @@
 #SBATCH --output=slurm-%x.o%j
 #SBATCH --error=slurm-%x.e%j
 #SBATCH -J fof
-# #SBATCH --dependency=afterany:52925
+#SBATCH --dependency=afterok:7779833
 
 set -x
 
@@ -25,7 +25,7 @@ export OMP_NUM_THREADS=2
 # (use half of allocated processors below so we can use 2 threads)
 
 
-simseed=400
+simseed=401
 simsnap=0.6250
 # use 24 to cut at 25
 nminptcles=24

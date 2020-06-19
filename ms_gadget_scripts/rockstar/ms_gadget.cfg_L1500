@@ -35,7 +35,7 @@ AREPO_MASS_CONVERSION = 1e+10
 # MS: Default of MP-Gadget seems to be 1./30. of mean DM particle separation
 # See https://github.com/MP-Gadget/MP-Gadget/blob/91eae955d8001eac54754c9cb45331ab03a85200/gadget/params.c
 # For ms_gadget_L500 get (500./1536.)/30. = 0.01085
-# for ms_gadget_L1500 get (1500./1536.)/30.
+# for ms_gadget_L1500 get (1500./1536.)/30. = 0.03255208
 #FORCE_RES = 0.001 #Force resolution of simulation, in Mpc/h
 #FORCE_RES = 0.01085
 FORCE_RES = 0.03255208
@@ -44,11 +44,11 @@ FORCE_RES = 0.03255208
 PARALLEL_IO=1
 
 #This specifies the input filenames. Should use /scratch b/c much faster than /data.
-INBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-1500.0-wig/snap_0.6250.gadget3/"
+INBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000401-01536-1500.0-wig/snap_0.6250.gadget3/"
 FILENAME="snap_0.6250.<block>.hdf5"
 NUM_SNAPS=1
 NUM_BLOCKS=64
-OUTBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000400-01536-1500.0-wig/snap_0.6250.gadget3/"
+OUTBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000401-01536-1500.0-wig/snap_0.6250.gadget3/"
 
 #This specifies how many CPUs you want to analyze the particles. 
 # MS: Must be 1 (non-periodic!) or multiple of 8. Helios has 28 cpus per node.

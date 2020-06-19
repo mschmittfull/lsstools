@@ -43,9 +43,10 @@ from perr_private.read_utils import readout_mesh_at_cat_pos
 
 
 # path
-sim_seed = 404
+sim_seed = 400
+boxsize = 1500.
 #basedir = '/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
-basedir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-01536-500.0-wig/' % sim_seed
+basedir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-01536-%.1f-wig/' % (sim_seed, boxsize)
 sim_scale_factor = 0.625
 
 # cosmology of ms_gadget sims (to compute D_lin(z))
@@ -394,7 +395,7 @@ mtp = ModelTargetPair(model=PsiDot1_D2, target=gal_ptchall_D2)
 #mtp = ModelTargetPair(model=delta2LPT_D0, target=gal_ptchall_D0)
 #mtp = ModelTargetPair(model=delta2LPT_D0, target=gal_ptchall_subbox_D0) # careful with subbox: this makes box nonperiodic!
 
-BoxSize = np.array([500.,500.,500.])
+BoxSize = np.array([boxsize,boxsize,boxsize])
 #BoxSize = np.array([100.,100.,100.])
 
 # residual displacement at target position

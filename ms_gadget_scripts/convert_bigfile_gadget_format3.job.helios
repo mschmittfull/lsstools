@@ -12,7 +12,7 @@
 #SBATCH --error=slurm-%x.e%j
 #SBATCH -J convert
 #SBATCH --exclusive
-# #SBATCH --dependency=afterok:7655459
+#SBATCH --dependency=afterok:7779833
 
 set -x
 
@@ -38,7 +38,7 @@ conda activate nbodykit-0.3.7-env
 echo "Convert bigfile to gadget3"
 #for SimSeed in 400 401 402 403 404
 #for SimSeed in 401 402 403 404
-for SimSeed in 400
+for SimSeed in 401
 do
     #InFile="/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_000"
     InFile="/scratch/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-0$Np-1500.0-wig/snap_0.6250"
