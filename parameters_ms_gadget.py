@@ -558,7 +558,7 @@ class MSGadgetSimOpts(SimOpts):
                          ]
                     )
 
-                if True:
+                if False:
                     # god sample
                     assert RSD_los in [None, [0,0,1]]
                     cats['delta_gPTC_GodPsiDot1%s' % RSDstring] = Target(

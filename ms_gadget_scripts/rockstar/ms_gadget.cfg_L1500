@@ -44,11 +44,11 @@ FORCE_RES = 0.03255208
 PARALLEL_IO=1
 
 #This specifies the input filenames. Should use /scratch b/c much faster than /data.
-INBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000401-01536-1500.0-wig/snap_0.6250.gadget3/"
+INBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000402-01536-1500.0-wig/snap_0.6250.gadget3/"
 FILENAME="snap_0.6250.<block>.hdf5"
 NUM_SNAPS=1
 NUM_BLOCKS=64
-OUTBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000401-01536-1500.0-wig/snap_0.6250.gadget3/"
+OUTBASE="/scratch/mschmittfull/lss/ms_gadget/run4/00000402-01536-1500.0-wig/snap_0.6250.gadget3/"
 
 #This specifies how many CPUs you want to analyze the particles. 
 # MS: Must be 1 (non-periodic!) or multiple of 8. Helios has 28 cpus per node.
