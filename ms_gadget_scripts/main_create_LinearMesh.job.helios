@@ -1,8 +1,8 @@
 #!/bin/bash -l
 
 # # required time of job
-#SBATCH -t 24:00:00
-#SBATCH -n 1
+#SBATCH -t 08:00:00
+#SBATCH --nodes=4
 # #SBATCH --mem=120GB
 #SBATCH --export=ALL
 #SBATCH -V
@@ -10,9 +10,9 @@
 #SBATCH --mail-type=ALL
 #SBATCH --output=slurm-%x.o%j
 #SBATCH --error=slurm-%x.e%j
-#SBATCH -J convert
+#SBATCH -J linmesh
 #SBATCH --exclusive
-#SBATCH --dependency=afterok:7779833
+# #SBATCH --dependency=afterok:7779833
 
 set -x
 
@@ -28,25 +28,15 @@ export OMP_NUM_THREADS=2
 export HDF5_USE_FILE_LOCKING=FALSE
 
 # params
-#Np="0032"
-Np="1536"
+Ng=1536
 
 
 # run
 conda activate nbodykit-0.3.7-env
 
-echo "Convert bigfile to gadget3"
-#for SimSeed in 400 401 402 403 404
-#for SimSeed in 401 402 403 404
-for SimSeed in 404
+for SimSeed in 403 404 405
 do
-    #InFile="/Users/mschmittfull/scratch_data/lss/ms_gadget/run4/00000$SimSeed-0$Np-500.0-wig/snap_000"
-    InFile="/scratch/mschmittfull/lss/ms_gadget/run4/00000$SimSeed-0$Np-1500.0-wig/snap_0.6250"
-    OutFile="$InFile.gadget3/"
-
-    echo "InFile: $InFile"
-    echo "OutFile: $OutFile"
-    python convert_bigfile_gadget_format3.py --input=$InFile --output=$OutFile
+    srun -n 14 python main_create_LinearMesh.py $SimSeed $Ng
 done
         
 conda deactivate                
