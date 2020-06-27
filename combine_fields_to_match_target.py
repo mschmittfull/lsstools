@@ -175,11 +175,7 @@ def paint_combine_and_calc_power(trf_specs,
                     cat,
                     weight=None,
                     Nmesh=grid_opts.Ngrid,
-                    to_mesh_kwargs={
-                        'window': 'cic',
-                        'compensated': False,
-                        'interlaced': False
-                    },
+                    to_mesh_kwargs=power_opts.to_mesh_kwargs,
                     set_mean=0,
                     verbose=True)
             else:

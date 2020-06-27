@@ -21,7 +21,7 @@ def main():
 
     For batch runs, use e.g.
 
-    for SEED in {0..4}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/data/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --max_rows 5 --include_parent_ID; done
+    for SEED in {0..1}; do python main_rockstar_catalog_to_bigfile.py --rockstar_halos "/scratch/mschmittfull/lss/ms_gadget/run4/0000040${SEED}-01536-1500.0-wig/snap_0.6250.gadget3/rockstar_out_0.list" --max_rows 5 --include_parent_ID; done
     """
     setup_logging()
 

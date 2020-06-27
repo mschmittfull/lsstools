@@ -58,7 +58,9 @@ class PowerOpts(object):
                  RSD_poles=None,
                  RSD_Nmu=None,
                  RSD_los=None,
-                 Pk_ptcle2grid_deconvolution=None):
+                 Pk_ptcle2grid_deconvolution=None,
+                 to_mesh_kwargs=None
+                 ):
         """Object bundling options for power spectrum measurements.
 
         Attributes
@@ -85,6 +87,12 @@ class PowerOpts(object):
         self.RSD_Nmu = RSD_Nmu
         self.RSD_los = RSD_los
         self.Pk_ptcle2grid_deconvolution = Pk_ptcle2grid_deconvolution
+        self.to_mesh_kwargs = to_mesh_kwargs
+        if self.to_mesh_kwargs is None:
+            self.to_mesh_kwargs = {
+                        'window': 'cic',
+                        'compensated': False,
+                        'interlaced': False}
 
 
 class SimOpts(object):
