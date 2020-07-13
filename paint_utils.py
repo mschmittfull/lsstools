@@ -53,6 +53,7 @@ def paint_cat_to_gridk(PaintGrid_config,
                        Ngrid=None,
                        boxsize=None,
                        grid_ptcle2grid_deconvolution=None,
+                       to_mesh_kwargs=None,
                        kmax=None,
                        cache_path=None):
     """
@@ -117,16 +118,18 @@ def paint_cat_to_gridk(PaintGrid_config,
         cat_nbk = read_ms_hdf5_catalog(PaintGrid_config['DataSource']['path'])
 
         # Paint options
-        if grid_ptcle2grid_deconvolution is None:
-            to_mesh_kwargs = {
-                'window': 'cic',
-                'compensated': False,
-                'interlaced': False,
-                'BoxSize': np.array([boxsize, boxsize, boxsize]),
-                'dtype': 'f8'
-            }
-        else:
-            raise Exception("todo: specify to_mesh_kwargs properly")
+        if grid_ptcle2grid_deconvolution is not None:
+            raise Exception("grid_ptcle2grid_deconvolution not implemented any more")
+
+        if to_mesh_kwargs is None:
+            raise Exception('must specify to_mesh_kwargs')
+            # to_mesh_kwargs = {
+            #     'window': 'cic',
+            #     'compensated': False,
+            #     'interlaced': False,
+            #     'BoxSize': np.array([boxsize, boxsize, boxsize]),
+            #     'dtype': 'f8'
+            # }            
 
         if paint_mode in [None, 'overdensity']:
             # Paint overdensity.

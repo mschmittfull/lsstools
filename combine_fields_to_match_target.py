@@ -88,6 +88,7 @@ def paint_combine_and_calc_power(trf_specs,
             'boxsize': sim_opts.boxsize,
             'grid_ptcle2grid_deconvolution': 
                 grid_opts.grid_ptcle2grid_deconvolution,
+            'to_mesh_kwargs': power_opts.to_mesh_kwargs,
             'f_log_growth': f_log_growth,
             'kmax': grid_opts.kmax
         }
@@ -292,6 +293,7 @@ def paint_combine_and_calc_power(trf_specs,
             'boxsize': sim_opts.boxsize,
             'grid_ptcle2grid_deconvolution':
             grid_opts.grid_ptcle2grid_deconvolution,
+            'to_mesh_kwargs': power_opts.to_mesh_kwargs,
             'kmax': grid_opts.kmax
         }
 

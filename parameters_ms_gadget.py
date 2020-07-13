@@ -524,6 +524,8 @@ class MSGadgetSimOpts(SimOpts):
                 # Note that our MP-Gadget files have RSDFactor=1/(a^2H)=0.0183231 for a=0.6250 b/c they use a^2\dot x for Velocity.
                 # Rockstar 'Velocity' column is v=a\dot x in km/s ("Velocities in 
                 # km / s (physical, peculiar)")
+                #
+                # Minimum mass in L=1500, Np=1536 sims is Mmin_1500 = 15.9e10 = 10**11.2
 
                 from perr_private.model_target_pair import Target
                 from sim_galaxy_catalog_creator import PTChallengeGalaxiesFromRockstarHalos
@@ -555,6 +557,20 @@ class MSGadgetSimOpts(SimOpts):
                     RSDFactor=RSDFactor_rockstar, # to convert velocity to RSD displacement in Mpc/h
                     cuts=[PTChallengeGalaxiesFromRockstarHalos(
                             log10M_column='log10Mvir', log10Mmin=12.97, sigma_log10M=0.35, RSD=False)
+                         ]
+                    )
+
+                cats['delta_gPTC_11.5%s' % RSDstring] = Target(
+                    name='delta_gPTC%s' % RSDstring,
+                    in_fname='snap_%.4f.gadget3/rockstar_out_0.list.bigfile' % (
+                        self.sim_scale_factor),
+                    position_column='Position',
+                    velocity_column='Velocity', 
+                    apply_RSD_to_position=apply_RSD_to_position,
+                    RSD_los=RSD_los,
+                    RSDFactor=RSDFactor_rockstar, # to convert velocity to RSD displacement in Mpc/h
+                    cuts=[PTChallengeGalaxiesFromRockstarHalos(
+                            log10M_column='log10Mvir', log10Mmin=11.5, sigma_log10M=0.35, RSD=False)
                          ]
                     )
 
