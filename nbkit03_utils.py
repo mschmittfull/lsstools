@@ -570,6 +570,37 @@ def calc_quadratic_field(
             else:
                 out_rfield += Psi_i_x * nabla_i_delta_x
 
+    elif quadfield in ['tidal_G2_par_LOS100', 'tidal_G2_par_LOS010', 'tidal_G2_par_LOS001']:
+        if quadfield.endswith('100'):
+            LOS_dir = 0
+        elif quadfield.endswith('010'):
+            LOS_dir = 1
+        elif quadfield.endswith('001'):
+            LOS_dir = 2
+        else:
+            raise Exception('invalid LOS')
+
+        # compute nabla_parallel^2/nabla^2 G2
+        G2_mesh = calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        def my_parallel_transfer_function(k3vec, val, idir=LOS_dir, jdir=LOS_dir):
+            kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+            kk[kk == 0] = 1
+            return k3vec[idir] * k3vec[jdir] * val / kk
+
+        G2_parallel = G2_mesh.apply(my_parallel_transfer_function,
+                                      mode='complex',
+                                      kind='wavenumber')
+        del my_parallel_transfer_function
+
+        out_rfield = G2_parallel.compute(mode='real')
+        del G2_parallel, G2_mesh
+
+
     elif quadfield == 'F2':
         # F2 = delta^2...
         out_rfield = calc_quadratic_field(
