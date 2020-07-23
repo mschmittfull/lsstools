@@ -3,6 +3,8 @@ from collections import namedtuple, OrderedDict
 import numpy as np
 
 from parameters import SimOpts
+from lsstools.cosmo_model import CosmoModel
+from lsstools.gen_cosmo_fcns import calc_f_log_growth_rate, generate_calc_Da
 
 
 class MSGadgetSimOpts(SimOpts):
