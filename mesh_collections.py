@@ -470,6 +470,7 @@ class Grid(object):
                 assert self.Ngrid == tmp_grid.Ngrid
                 assert self.boxsize == tmp_grid.boxsize
                 assert type(self) == type(tmp_grid)
+
                 self.append_column(col,
                                    tmp_grid.G[col],
                                    column_info=tmp_grid.column_infos.get(

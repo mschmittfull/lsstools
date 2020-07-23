@@ -36,7 +36,6 @@ class MSGadgetSimOpts(SimOpts):
         default['sim_Ntimesteps'] = None
         default['sim_Nptcles'] = 1536
         default['sim_wig_now_string'] = 'wig'
-        default['f_log_growth'] = None
         # halo mass
         default['halo_mass_string'] = '13.8_15.1'
         default['hod_model_name'] = 'Zheng07_HandSeljak17'
@@ -51,6 +50,19 @@ class MSGadgetSimOpts(SimOpts):
                                        Om_K=0.0,
                                        Om_r=0.0,
                                        h0=0.6774)
+
+        # calculate D and f
+        cosmo = CosmoModel(**default['cosmo_params'])
+        calc_Da = generate_calc_Da(cosmo=cosmo)
+        f_log_growth = calc_f_log_growth_rate(
+            a=sim_opts.sim_scale_factor,
+            calc_Da=calc_Da,
+            cosmo=cosmo,
+            do_test=True
+            )
+        # save in opts so we can easily access it throughout code (although strictly
+        # speaking it is not a free option but derived from cosmo_params)
+        default['f_log_growth'] = f_log_growth
 
         # update with kwargs and return
         default.update(kwargs)

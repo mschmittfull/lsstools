@@ -9,6 +9,8 @@ import sys
 import interpolation_utils
 from nbodykit.source.mesh.field import FieldMesh
 import transfer_functions
+from lsstools.gen_cosmo_fcns import calc_f_log_growth_rate, generate_calc_Da
+
 
 
 def generate_sources_and_get_interp_filters_minimizing_sqerror(
@@ -46,6 +48,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
     target = trf_spec.target_field
     target_spec = getattr(trf_spec, 'target_spec', None)
     save_bestfit_field = trf_spec.save_bestfit_field
+    field_prefactors = getattr(trf_spec, 'field_prefactors', {})
 
     if trf_fcn_opts.interp_kind not in ['manual_Pk_k_bins', 
                                         'manual_Pk_k_mu_bins']:
@@ -195,6 +198,13 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     print("initial_source_of_osource:", initial_source_of_osource)
     Nsources = len(osources)
+
+    # apply field_prefactors
+    for col, prefac in field_prefactors.items():
+        print('Apply prefactor %g to %s' % (prefac, col))
+
+        gridk.G[col] = FieldMesh(prefac * gridk.G[col].compute(mode='complex'))
+    raise Exception('test prefac')
 
     # ##########################################################################
     # Compute orthogonalized sources

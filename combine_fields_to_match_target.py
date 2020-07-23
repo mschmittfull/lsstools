@@ -372,6 +372,7 @@ def paint_combine_and_calc_power(trf_specs,
         # Cache grid to disk, drop from memory, and reload below
         # ######################################################################
         cached_columns += gridk.G.keys()
+
         print("try caching these columns:", gridk.G.keys())
         gridk.save_to_bigfile(gridk_cache_fname,
                               gridk.G.keys(),
