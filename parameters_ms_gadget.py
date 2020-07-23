@@ -53,11 +53,16 @@ class MSGadgetSimOpts(SimOpts):
                                        Om_r=0.0,
                                        h0=0.6774)
 
-        # calculate D and f
+        # update with kwargs and return
+        default.update(kwargs)
+
+        # calculate D and f given cosmo and sim_scale_factor
+        # don't allow it to be given by kwargs
+        assert 'f_log_growth' not in kwargs.keys()
         cosmo = CosmoModel(**default['cosmo_params'])
         calc_Da = generate_calc_Da(cosmo=cosmo)
         f_log_growth = calc_f_log_growth_rate(
-            a=sim_opts.sim_scale_factor,
+            a=default['sim_scale_factor'],
             calc_Da=calc_Da,
             cosmo=cosmo,
             do_test=True
@@ -66,8 +71,7 @@ class MSGadgetSimOpts(SimOpts):
         # speaking it is not a free option but derived from cosmo_params)
         default['f_log_growth'] = f_log_growth
 
-        # update with kwargs and return
-        default.update(kwargs)
+
         return MSGadgetSimOpts(**default)
 
     def get_default_ext_grids_to_load(self,
