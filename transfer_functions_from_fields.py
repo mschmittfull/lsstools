@@ -205,7 +205,7 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
         gridk.G[col] = FieldMesh(prefac * gridk.G[col].compute(mode='complex'))
 
-        raise Exception('test prefac')
+
 
     # ##########################################################################
     # Compute orthogonalized sources
