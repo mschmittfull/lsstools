@@ -244,7 +244,7 @@ class MSGadgetSimOpts(SimOpts):
 
                     # G2_parallel[deltalin] shifted by deltalin_Zeldovich displacement (using 
                     # nbkit0.3)
-                    for los_string in ['001','010','100']:
+                    for los_string in ['001']:
                         ext_grids['deltalin_G2_par_LOS%s_SHIFTEDBY_%sdeltalin%s' % (
                             los_string, psi_type_str, model_RSDstring)] = {
                             'dir':
