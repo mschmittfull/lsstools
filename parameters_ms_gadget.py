@@ -242,6 +242,23 @@ class MSGadgetSimOpts(SimOpts):
                         'nbkit_setMean': 0.0
                     }
 
+                    # G2_parallel[deltalin] shifted by deltalin_Zeldovich displacement (using 
+                    # nbkit0.3)
+                    for los_string in ['001','010','100']:
+                        ext_grids['deltalin_G2_par_LOS%s_SHIFTEDBY_%sdeltalin%s' % (
+                            los_string, psi_type_str, model_RSDstring)] = {
+                            'dir':
+                            'IC_LinearMesh_tidal_G2_par_LOS%s_intR0.00_extR0.00_SHIFTEDBY_%sIC_LinearMeshR%.2f_a%.4f_Np%d_Nm%d_Ng%d_CICsum%s'
+                            % (los_string, psi_type_str, shifted_fields_RPsi, self.sim_scale_factor,
+                               shifted_fields_Np, shifted_fields_Nmesh, Ngrid,
+                               model_RSDstring),
+                            'file_format': 'nbkit_BigFileGrid',
+                            'dataset_name': 'Field',
+                            'scale_factor': self.sim_scale_factor,
+                            'nbkit_normalize': True,
+                            'nbkit_setMean': 0.0
+                        }
+
                     # deltalin^3 shifted by deltalin_Zeldovich displacement (using 
                     # nbkit0.3)
                     ext_grids['deltalin_cube-mean_SHIFTEDBY_%sdeltalin%s' % (
