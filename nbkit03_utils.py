@@ -570,35 +570,37 @@ def calc_quadratic_field(
             else:
                 out_rfield += Psi_i_x * nabla_i_delta_x
 
-    elif quadfield in ['tidal_G2_par_LOS100', 'tidal_G2_par_LOS010', 'tidal_G2_par_LOS001']:
-        if quadfield.endswith('100'):
-            LOS_dir = 0
-        elif quadfield.endswith('010'):
-            LOS_dir = 1
-        elif quadfield.endswith('001'):
-            LOS_dir = 2
-        else:
-            raise Exception('invalid LOS')
+    # elif quadfield in ['tidal_G2_par_LOS100', 'tidal_G2_par_LOS010', 'tidal_G2_par_LOS001']:
+    #     if quadfield.endswith('100'):
+    #         LOS_dir = 0
+    #     elif quadfield.endswith('010'):
+    #         LOS_dir = 1
+    #     elif quadfield.endswith('001'):
+    #         LOS_dir = 2
+    #     else:
+    #         raise Exception('invalid LOS')
 
-        # compute nabla_parallel^2/nabla^2 G2
-        G2_mesh = calc_quadratic_field(
-            quadfield='tidal_G2',
-            base_field_mesh=base_field_mesh,
-            smoothing_of_base_field=smoothing_of_base_field,
-            verbose=verbose)
+    #     # compute nabla_parallel^2/nabla^2 G2
+    #     G2_mesh = calc_quadratic_field(
+    #         quadfield='tidal_G2',
+    #         base_field_mesh=base_field_mesh,
+    #         smoothing_of_base_field=smoothing_of_base_field,
+    #         verbose=verbose)
 
-        def my_parallel_transfer_function(k3vec, val, idir=LOS_dir, jdir=LOS_dir):
-            kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
-            kk[kk == 0] = 1
-            return k3vec[idir] * k3vec[jdir] * val / kk
+    #     def my_parallel_transfer_function(k3vec, val, idir=LOS_dir, jdir=LOS_dir):
+    #         kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+    #         kk[kk == 0] = 1
+    #         # MS 25 Jul 2020: Include minus sign because (ik_2)^2=-k_2^2.
+    #         return -k3vec[idir] * k3vec[jdir] * val / kk
 
-        G2_parallel = G2_mesh.apply(my_parallel_transfer_function,
-                                      mode='complex',
-                                      kind='wavenumber')
-        del my_parallel_transfer_function
+    #     G2_parallel = G2_mesh.apply(my_parallel_transfer_function,
+    #                                   mode='complex',
+    #                                   kind='wavenumber')
+    #     del my_parallel_transfer_function
 
-        out_rfield = G2_parallel.compute(mode='real')
-        del G2_parallel, G2_mesh
+    #     out_rfield = G2_parallel.compute(mode='real')
+    #     del G2_parallel, G2_mesh
+
 
 
     elif quadfield == 'F2':
@@ -641,7 +643,7 @@ def calc_quadratic_field(
             smoothing_of_base_field=smoothing_of_base_field,
             verbose=verbose).compute(mode='real')
 
-    elif quadfield == 'G2_delta':
+    elif quadfield in ['delta_G2', 'G2_delta']:
         # Get G2[delta] * delta
         out_rfield = (
             base_field_mesh.compute(mode='real')
@@ -655,6 +657,23 @@ def calc_quadratic_field(
         mymean = out_rfield.cmean()
         if comm.rank == 0:
             print('Subtract mean of G2*delta: %g' % mymean)
+        out_rfield -= mymean 
+
+
+    elif quadfield in ['delta_G2_par_LOS100', 'delta_G2_par_LOS010', 'delta_G2_par_LOS001']:
+        # Get delta * G2_parallel[delta]
+        out_rfield = (
+            base_field_mesh.compute(mode='real')
+            * calc_quadratic_field(
+                quadfield='tidal_G2_par_LOS%s' % (quadfield[-3:]),
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose).compute(mode='real'))
+
+        # take out the mean (already close to 0 but still subtract)
+        mymean = out_rfield.cmean()
+        if comm.rank == 0:
+            print('Subtract mean of G2par*delta: %g' % mymean)
         out_rfield -= mymean 
 
 
@@ -753,6 +772,326 @@ def calc_quadratic_field(
             second_base_field_mesh=tmp_G2,
             smoothing_of_base_field=smoothing_of_base_field,
             verbose=verbose).compute(mode='real')
+
+
+    elif quadfield in [
+        'delta1_par_LOS100', 'delta1_par_LOS010', 'delta1_par_LOS001', 
+        'tidal_G2_par_LOS100', 'tidal_G2_par_LOS010', 'tidal_G2_par_LOS001', 
+        'Gamma3_par_LOS100', 'Gamma3_par_LOS010', 'Gamma3_par_LOS001',
+        'tidal_G3_par_LOS100', 'tidal_G3_par_LOS010', 'tidal_G3_par_LOS001', 
+        'tidal_G3_flipped_dij_sign_par_LOS100', 'tidal_G3_flipped_dij_sign_par_LOS010', 'tidal_G3_flipped_dij_sign_par_LOS001'
+    ]:
+        if quadfield.endswith('LOS100'):
+            LOS_dir = 0
+        elif quadfield.endswith('LOS010'):
+            LOS_dir = 1
+        elif quadfield.endswith('LOS001'):
+            LOS_dir = 2
+        else:
+            raise Exception('invalid LOS string in %s' % str(quadfield))
+
+
+        if quadfield.startswith('delta1_par'):
+            tmp_base_quadfield_str = 'delta1'
+        elif quadfield.startswith('tidal_G2_par'):
+            tmp_base_quadfield_str = 'tidal_G2'
+        elif quadfield.startswith('Gamma3_par'):
+            tmp_base_quadfield_str = 'Gamma3'
+        elif quadfield.startswith('tidal_G3_par'):
+            tmp_base_quadfield_str = 'tidal_G3'
+        elif quadfield.startswith('tidal_G3_flipped_dij_sign_par'):
+            tmp_base_quadfield_str = 'tidal_G3_flipped_dij_sign'
+        else:
+            raise Exception('Invalid quadfield %s' % str(quadfield))
+
+        # compute nabla_parallel^2/nabla^2 tmp_base_quadfield
+        if tmp_base_quadfield_str == 'delta1':
+            tmp_base_quadfield_mesh = FieldMesh(base_field_mesh.compute(
+                mode='real'))
+        else:
+            tmp_base_quadfield_mesh = calc_quadratic_field(
+                quadfield=tmp_base_quadfield_str,
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+
+        def my_parallel_transfer_function(k3vec, val, idir=LOS_dir, jdir=LOS_dir):
+            kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+            kk[kk == 0] = 1
+            # MS 25 Jul 2020: Include minus sign because (ik_2)^2=-k_2^2.
+            return -k3vec[idir] * k3vec[jdir] * val / kk
+
+        tmp_base_quadfield_parallel = tmp_base_quadfield_mesh.apply(
+            my_parallel_transfer_function,
+            mode='complex',
+            kind='wavenumber')
+        del my_parallel_transfer_function
+
+        out_rfield = tmp_base_quadfield_parallel.compute(mode='real')
+        del tmp_base_quadfield_parallel, tmp_base_quadfield_mesh
+
+
+    elif quadfield == 'delta1_par_G2_par_LOS001':
+        out_rfield = (
+            calc_quadratic_field(
+                quadfield='delta1_par_LOS001',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+            * calc_quadratic_field(
+                quadfield='tidal_G2_par_LOS001',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose) )
+
+
+    elif quadfield in ['RSDLPT_Q2_LOS001']:
+        # Q2 = sum_i d_i2 d_i2
+        # d_ij = -k_ik_j/k^2*basefield(\vk).
+
+        out_rfield = None
+        jdir = 2
+        for idir in range(3):
+
+            def my_transfer_function_dij(k3vec, val, idir=idir, jdir=jdir):
+                kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                kk[kk == 0] = 1
+                return -k3vec[idir] * k3vec[jdir] * val / kk
+
+            dij_k = base_field_mesh.apply(my_transfer_function_dij,
+                                          mode='complex',
+                                          kind='wavenumber')
+            del my_transfer_function_dij
+            # do fft and convert field_mesh to RealField object
+            dij_x = dij_k.compute(mode='real')
+            del dij_k
+
+            if verbose:
+                rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+            if out_rfield is None:
+                out_rfield = dij_x**2
+            else:
+                out_rfield += dij_x**2
+
+
+    elif quadfield in ['RSDLPT_K3_LOS001']:
+        # K3 = sum_i d_i2 dG2_i2
+        # where d_ij = -k_ik_j/k^2*basefield(\vk)
+        # and dG2_ij = -k_ik_j/k^2*G2(\vk).
+        tmp_G2_mesh = calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        out_rfield = None
+        jdir = 2
+        for idir in range(3):
+
+            def my_transfer_function_dij(k3vec, val, idir=idir, jdir=jdir):
+                kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                kk[kk == 0] = 1
+                return -k3vec[idir] * k3vec[jdir] * val / kk
+
+            dij_x = base_field_mesh.apply(my_transfer_function_dij,
+                                          mode='complex',
+                                          kind='wavenumber').compute(mode='real')
+
+            dijG2_x = tmp_G2_mesh.apply(my_transfer_function_dij,
+                                          mode='complex',
+                                          kind='wavenumber').compute(mode='real')
+
+            del my_transfer_function_dij
+
+            if out_rfield is None:
+                out_rfield = dij_x * dijG2_x
+            else:
+                out_rfield += dij_x * dijG2_x
+
+
+    elif quadfield in ['RSDLPT_S3Ia','RSDLPT_S3IIa_LOS001']:
+        # S3Ia = sum_i d_i where d_i = - (k_i/k^2 G2) (k_i delta_1)
+        # (or delta_1 -> delta_1 parallel for S3IIa)
+        tmp_G2_mesh = calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        if quadfield == 'RSDLPT_S3Ia':
+            tmp_delta1_mesh = FieldMesh(base_field_mesh.compute(mode='real'))
+        elif quadfield == 'RSDLPT_S3IIa_LOS001':
+            tmp_delta1_mesh =  calc_quadratic_field(
+                quadfield='delta1_par_LOS001',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+
+        out_rfield = None
+        for idir in range(3):
+
+            def my_trf_for_G2(k3vec, val, idir=idir):
+                kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                kk[kk == 0] = 1
+                return k3vec[idir] * val / kk
+
+            def my_trf_for_delta1(k3vec, val, idir=idir):
+                return k3vec[idir] * val
+
+            G2_filtered = tmp_G2_mesh.apply(my_trf_for_G2,
+                                          mode='complex',
+                                          kind='wavenumber').compute(mode='real')
+
+            delta1_filtered = tmp_delta1_mesh.apply(my_trf_for_delta1,
+                                          mode='complex',
+                                          kind='wavenumber').compute(mode='real')
+
+            del my_trf_for_G2, my_trf_for_delta1
+
+            if out_rfield is None:
+                out_rfield = -G2_filtered * delta1_filtered
+            else:
+                out_rfield -= G2_filtered * delta1_filtered
+
+
+    elif quadfield in ['RSDLPT_S3Ib_LOS001','RSDLPT_S3IIb_LOS001']:
+        # S3Ia = - (k_2/k^2 G2) (k_2 delta_1)
+
+        tmp_G2_mesh = calc_quadratic_field(
+            quadfield='tidal_G2',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        if quadfield == 'RSDLPT_S3Ib_LOS001':
+            tmp_delta1_mesh = FieldMesh(base_field_mesh.compute(mode='real'))
+        elif quadfield == 'RSDLPT_S3IIb_LOS001':
+            tmp_delta1_mesh =  calc_quadratic_field(
+                quadfield='delta1_par_LOS001',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+
+        idir = 2
+
+        def my_trf_for_G2(k3vec, val, idir=idir):
+            kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+            kk[kk == 0] = 1
+            return k3vec[idir] * val / kk
+
+        def my_trf_for_delta1(k3vec, val, idir=idir):
+            return k3vec[idir] * val
+
+        G2_filtered = tmp_G2_mesh.apply(my_trf_for_G2,
+                                      mode='complex',
+                                      kind='wavenumber').compute(mode='real')
+
+        delta1_filtered = tmp_delta1_mesh.apply(my_trf_for_delta1,
+                                      mode='complex',
+                                      kind='wavenumber').compute(mode='real')
+
+        del my_trf_for_G2, my_trf_for_delta1
+
+        out_rfield = -G2_filtered * delta1_filtered
+
+
+    elif quadfield in ['RSDLPT_calQ2_LOS001']:
+        # calQ2 = Q2 - delta1*delta1_parallel
+        out_rfield = calc_quadratic_field(
+            quadfield='RSDLPT_Q2_LOS001',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        out_rfield -= (
+            base_field_mesh.compute(mode='real')
+            * calc_quadratic_field(
+            quadfield='delta1_par_LOS001',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose))
+
+    elif quadfield in ['RSDLPT_calQ3_LOS001']:
+        # calQ3 = Q3 - delta1 Q2 - 1/2 delta1_par G2
+        out_rfield = calc_quadratic_field(
+            quadfield='RSDLPT_Q3_LOS001',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose)
+
+        out_rfield -= (
+            base_field_mesh.compute(mode='real')
+            * calc_quadratic_field(
+            quadfield='RSDLPT_Q2_LOS001',
+            base_field_mesh=base_field_mesh,
+            smoothing_of_base_field=smoothing_of_base_field,
+            verbose=verbose))
+
+        out_rfield -= 0.5 * (
+            calc_quadratic_field(
+                quadfield='delta1_par_LOS001',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+            * calc_quadratic_field(
+                quadfield='tidal_G2',
+                base_field_mesh=base_field_mesh,
+                smoothing_of_base_field=smoothing_of_base_field,
+                verbose=verbose)
+            )
+
+
+    elif quadfield in ['RSDLPT_Q3_LOS001']:
+        # Q3 = sum_m,n d_m2 d_mn d_n2
+        # d_ij = -k_ik_j/k^2*basefield(\vk).
+        # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
+        dij_x_dict = {}
+        for idir in range(3):
+            for jdir in range(idir, 3):
+
+                def my_dij_transfer_function(k3vec, val, idir=idir, jdir=jdir):
+                    kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
+                    kk[kk == 0] = 1
+                    return -k3vec[idir] * k3vec[jdir] * val / kk
+
+                dij_k = base_field_mesh.apply(my_dij_transfer_function,
+                                              mode='complex',
+                                              kind='wavenumber')
+                del my_dij_transfer_function
+                # do fft and convert field_mesh to RealField object
+                dij_x = dij_k.compute(mode='real')
+                del dij_k
+
+                if verbose:
+                    rfield_print_info(dij_x, comm, 'd_%d%d: ' % (idir, jdir))
+
+                dij_x_dict[(idir,jdir)] = dij_x
+                del dij_x
+
+        # get j<i by symmetry
+        def get_dij_x(idir, jdir):
+            if jdir>=idir:
+                return dij_x_dict[(idir,jdir)]
+            else:
+                return dij_x_dict[(jdir,idir)]
+
+        # Compute sum_nm d_2m(k) d_mn(q) d_n2(p), assume LOS=z direction.
+        out_rfield = 0.0 * base_field_mesh.compute(mode='real')
+        for mdir in range(3):
+            for ndir in range(3):
+                out_rfield += (
+                      get_dij_x(2,mdir)
+                    * get_dij_x(mdir,ndir)
+                    * get_dij_x(ndir,2) )
+
+        # take out the mean (already close to 0 but still subtract)
+        mymean = out_rfield.cmean()
+        if comm.rank == 0:
+            print('Subtract mean of %s: %g' % (quadfield, mymean))
+        out_rfield -= mymean
+
+
 
 
     elif quadfield.startswith('PsiDot1_'):
