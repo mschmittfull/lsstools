@@ -917,7 +917,8 @@ def calc_quadratic_field(
             kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
             kk[kk == 0] = 1
             # MS 25 Jul 2020: Include minus sign because (ik_2)^2=-k_2^2.
-            return -k3vec[idir] * k3vec[jdir] * val / kk
+            # MS 29 Jul 2020: Drop minus sign because 1/nabla^2 gives another minus sign.
+            return k3vec[idir] * k3vec[jdir] * val / kk
 
         tmp_base_quadfield_parallel = tmp_base_quadfield_mesh.apply(
             my_parallel_transfer_function,
@@ -981,7 +982,7 @@ def calc_quadratic_field(
             def my_transfer_function_dij(k3vec, val, idir=idir, jdir=jdir):
                 kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
                 kk[kk == 0] = 1
-                return -k3vec[idir] * k3vec[jdir] * val / kk
+                return k3vec[idir] * k3vec[jdir] * val / kk
 
             dij_k = base_field_mesh.apply(my_transfer_function_dij,
                                           mode='complex',
@@ -1002,8 +1003,8 @@ def calc_quadratic_field(
 
     elif quadfield in ['RSDLPT_K3_LOS001']:
         # K3 = sum_i d_i2 dG2_i2
-        # where d_ij = -k_ik_j/k^2*basefield(\vk)
-        # and dG2_ij = -k_ik_j/k^2*G2(\vk).
+        # where d_ij = k_ik_j/k^2*basefield(\vk)
+        # and dG2_ij = k_ik_j/k^2*G2(\vk).
         tmp_G2_mesh = calc_quadratic_field(
             quadfield='tidal_G2',
             base_field_mesh=base_field_mesh,
@@ -1017,7 +1018,7 @@ def calc_quadratic_field(
             def my_transfer_function_dij(k3vec, val, idir=idir, jdir=jdir):
                 kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
                 kk[kk == 0] = 1
-                return -k3vec[idir] * k3vec[jdir] * val / kk
+                return k3vec[idir] * k3vec[jdir] * val / kk
 
             dij_x = base_field_mesh.apply(my_transfer_function_dij,
                                           mode='complex',
@@ -1036,7 +1037,7 @@ def calc_quadratic_field(
 
 
     elif quadfield in ['RSDLPT_S3Ia','RSDLPT_S3IIa_LOS001']:
-        # S3Ia = sum_i d_i where d_i = - (k_i/k^2 G2) (k_i delta_1)
+        # S3Ia = sum_i d_i where d_i = (k_i/k^2 G2) (k_i delta_1)
         # (or delta_1 -> delta_1 parallel for S3IIa)
         tmp_G2_mesh = calc_quadratic_field(
             quadfield='tidal_G2',
@@ -1075,13 +1076,13 @@ def calc_quadratic_field(
             del my_trf_for_G2, my_trf_for_delta1
 
             if out_rfield is None:
-                out_rfield = -G2_filtered * delta1_filtered
+                out_rfield = G2_filtered * delta1_filtered
             else:
-                out_rfield -= G2_filtered * delta1_filtered
+                out_rfield += G2_filtered * delta1_filtered
 
 
     elif quadfield in ['RSDLPT_S3Ib_LOS001','RSDLPT_S3IIb_LOS001']:
-        # S3Ia = - (k_2/k^2 G2) (k_2 delta_1)
+        # S3Ia = (k_2/k^2 G2) (k_2 delta_1)
 
         tmp_G2_mesh = calc_quadratic_field(
             quadfield='tidal_G2',
@@ -1118,7 +1119,7 @@ def calc_quadratic_field(
 
         del my_trf_for_G2, my_trf_for_delta1
 
-        out_rfield = -G2_filtered * delta1_filtered
+        out_rfield = G2_filtered * delta1_filtered
 
 
     elif quadfield in ['RSDLPT_calQ2_LOS001']:
@@ -1169,7 +1170,7 @@ def calc_quadratic_field(
 
     elif quadfield in ['RSDLPT_Q3_LOS001']:
         # Q3 = sum_m,n d_m2 d_mn d_n2
-        # d_ij = -k_ik_j/k^2*basefield(\vk).
+        # d_ij = k_ik_j/k^2*basefield(\vk).
         # Compute d_ij(x). It's symmetric in i<->j so only compute j>=i.
         dij_x_dict = {}
         for idir in range(3):
@@ -1178,7 +1179,7 @@ def calc_quadratic_field(
                 def my_dij_transfer_function(k3vec, val, idir=idir, jdir=jdir):
                     kk = sum(ki**2 for ki in k3vec)  # k^2 on the mesh
                     kk[kk == 0] = 1
-                    return -k3vec[idir] * k3vec[jdir] * val / kk
+                    return k3vec[idir] * k3vec[jdir] * val / kk
 
                 dij_k = base_field_mesh.apply(my_dij_transfer_function,
                                               mode='complex',
