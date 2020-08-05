@@ -1265,7 +1265,7 @@ class ComplexGrid(Grid):
         self.apply_smoothing(tmpcol, mode='Gaussian', R=R)
         helper_gridx.append_column(tmpcol, self.fft_k2x(tmpcol,
                                                         drop_column=True))
-        out_fname = os.path.join(path, '%s_R%s.hdf5' % (fname, str(R)))
+        out_fname = os.path.join(path, '%s_R%s' % (fname, str(R)))
 
         if ((replace_nan is not False) and np.isnan(
                 get_cstat(helper_gridx.G[tmpcol].compute(mode='real'),

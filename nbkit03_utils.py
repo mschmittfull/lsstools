@@ -367,6 +367,7 @@ def calc_quadratic_field(
         second_base_field_mesh=None,
         quadfield=None,
         smoothing_of_base_field=None,
+        smoothing_of_second_base_field=None,
         #return_in_k_space=False,
         verbose=False):
     """
@@ -413,9 +414,11 @@ def calc_quadratic_field(
     if smoothing_of_base_field is not None:
         base_field_mesh = apply_smoothing(mesh_source=base_field_mesh,
                                           **smoothing_of_base_field)
-        if second_base_field_mesh is not None:
+        
+    if second_base_field_mesh is not None:
+        if smoothing_of_second_base_field is not None:
             second_base_field_mesh = apply_smoothing(mesh_source=second_base_field_mesh,
-                                          **smoothing_of_base_field)
+                                          **smoothing_of_second_base_field)
 
 
     # compute quadratic (or cubic) field
@@ -865,10 +868,11 @@ def calc_quadratic_field(
             verbose=verbose)
 
         out_rfield = -4./7. * calc_quadratic_field(
-            quadfield='tidal_G2',
+            quadfield='tidal_G2_two_meshs',
             base_field_mesh=base_field_mesh,
             second_base_field_mesh=tmp_G2,
             smoothing_of_base_field=smoothing_of_base_field,
+            smoothing_of_second_base_field=None,
             verbose=verbose).compute(mode='real')
 
 
