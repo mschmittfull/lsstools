@@ -873,8 +873,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     trf_results['kvec'] = kvec
     trf_results['muvec'] = muvec
-    # this takes lots of space so skip
-    #trf_results['Pkmeas'] = Pkmeas
+    # this takes lots of space so could skip. but need when using fitted trf fcns.
+    trf_results['Pkmeas'] = Pkmeas
     trf_results['trf_fcns_orth_fields'] = trf_fcns_orth_fields
 
     if orth_method == 'CholeskyDecomp':
