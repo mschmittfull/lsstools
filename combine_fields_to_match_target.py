@@ -36,6 +36,7 @@ def paint_combine_and_calc_power(trf_specs,
                                  grids4plots_R=None,
                                  Pkmeas_helper_columns=None,
                                  Pkmeas_helper_columns_calc_crosses=False,
+                                 store_Pkmeas_in_trf_results=False,
                                  delete_cache=True,
                                  only_exec_trf_specs_subset=None,
                                  calc_power_of_ext_grids=False,
@@ -474,7 +475,8 @@ def paint_combine_and_calc_power(trf_specs,
                 trf_fcn_opts=trf_fcn_opts,
                 bounds_error=False,
                 power_opts=power_opts,
-                grid_opts=grid_opts))
+                grid_opts=grid_opts,
+                store_Pkmeas_in_trf_results=store_Pkmeas_in_trf_results))
 
         # save all trf fcns in dict
         trf_results[str(trf_spec)] = trf_results_here

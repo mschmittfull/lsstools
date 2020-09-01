@@ -22,7 +22,8 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
         grid_opts=None,
         bounds_error=False,
         save_target_contris=False,
-        save_cholesky_internals=False):
+        save_cholesky_internals=False,
+        store_Pkmeas_in_trf_results=False):
     """
     - Given target and source fields in k space (in gridk), compute transfer functions.
 
@@ -873,8 +874,9 @@ def generate_sources_and_get_interp_filters_minimizing_sqerror(
 
     trf_results['kvec'] = kvec
     trf_results['muvec'] = muvec
-    # this takes lots of space so could skip. but need when using fitted trf fcns.
-    trf_results['Pkmeas'] = Pkmeas
+    # Takes lots of space, but need when using fitted trf fcns.
+    if store_Pkmeas_in_trf_results:
+        trf_results['Pkmeas'] = Pkmeas
     trf_results['trf_fcns_orth_fields'] = trf_fcns_orth_fields
 
     if orth_method == 'CholeskyDecomp':
