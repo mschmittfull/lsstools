@@ -22,7 +22,7 @@ def main():
 
     ap = ArgumentParser()
     ap.add_argument('sim_seed', type=int, help='Simulation seed')
-    ap.add_argument('--save_bigfile', type=int, default=0, help='Save subsample to bigfile (should run with many cores)')
+    ap.add_argument('--save_bigfile', type=int, default=1, help='Save subsample to bigfile (should run with many cores)')
     ap.add_argument('--save_hdf5', type=int, default=0, help='Read subsample from bigfile and save as hdf5 (must run with 1 core)')
     
     cmd_args = ap.parse_args()
@@ -32,7 +32,8 @@ def main():
     # #####################
     # OPTIONS
     # #####################
-    boxsize = 500.0
+    #boxsize = 500.0
+    boxsize = 1500.0
 
     if True:
         # big sim
