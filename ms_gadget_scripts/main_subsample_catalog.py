@@ -32,7 +32,6 @@ def main():
     # #####################
     # OPTIONS
     # #####################
-    #boxsize = 500.0
     boxsize = 1500.0
 
     if True:
@@ -54,6 +53,7 @@ def main():
     sub_ssseed = 40000+sim_seed
     # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 
     # 1% subsample of 2048**3.
+    # Sep 2020: Use 0.0015 for laptop and 0.04 for cluster.
     subsample_ratio = 0.0015 
 
     # write subsample to bigfile (should run with many cores)
