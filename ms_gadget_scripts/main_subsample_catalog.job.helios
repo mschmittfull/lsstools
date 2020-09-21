@@ -25,12 +25,16 @@ export OMP_NUM_THREADS=2
 # (use half of allocated processors below so we can use 2 threads)
 
 
-simseed=405
 savebigfile=1
 
 conda activate nbodykit-0.3.7-env
 
-srun -n 140 python main_subsample_catalog.py $simseed --save_bigfile=$savebigfile
+for SimSeed in 400 401 402 403 404 405
+do
+    srun -n 140 python main_subsample_catalog.py $SimSeed --save_bigfile=$savebigfile
+done
+
+
             
 conda deactivate                
 

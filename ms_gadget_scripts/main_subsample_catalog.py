@@ -32,7 +32,7 @@ def main():
     # #####################
     # OPTIONS
     # #####################
-    boxsize = 1500.0
+    boxsize = 500.0
 
     if True:
         # big sim
@@ -54,7 +54,7 @@ def main():
     # subsample ratio. 0.025 corresponds to 90e6 ptcles which is similar to 
     # 1% subsample of 2048**3.
     # Sep 2020: Use 0.0015 for laptop and 0.04 for cluster.
-    subsample_ratio = 0.04
+    subsample_ratio = 0.00025
 
     # write subsample to bigfile (should run with many cores)
     save_bigfile = bool(cmd_args.save_bigfile)
