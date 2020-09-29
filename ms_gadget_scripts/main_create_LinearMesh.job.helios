@@ -28,13 +28,13 @@ export OMP_NUM_THREADS=2
 export HDF5_USE_FILE_LOCKING=FALSE
 
 # params
-Ng=1536
+Ng=512
 
 
 # run
 conda activate nbodykit-0.3.7-env
 
-for SimSeed in 403 404 405
+for SimSeed in 400
 do
     srun -n 14 python main_create_LinearMesh.py $SimSeed $Ng
 done
