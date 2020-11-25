@@ -38,14 +38,22 @@ def main():
     
     
     ### OPTIONS
+    wiggle = False
     boxsize = 1500.0
     Nptcles_per_dim_for_out_dir = 1536  # only used to get name of output folder
-    Plin_fname = '/home/mschmittfull/CODE/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_z0.dat'
+    if wiggle:
+        Plin_fname = '/home/mschmittfull/CODE/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_z0.dat'
+    else:
+        Plin_fname = '/home/mschmittfull/CODE/MP-Gadget_msrunscripts/ms_gadget/run4/planck_camb_56106182_matterpower_smooth_z0.dat'
     
 
     # Linear ICs
-    out_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
-        sim_seed,Nptcles_per_dim_for_out_dir,boxsize)
+    if wiggle:
+        out_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
+            sim_seed,Nptcles_per_dim_for_out_dir,boxsize)
+    else:
+        out_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-now/' % (
+            sim_seed,Nptcles_per_dim_for_out_dir,boxsize)
     out_file = 'IC_LinearMesh_z0_Ng%d' % Ngrid_out
     out_fname = os.path.join(out_dir,out_file)
     

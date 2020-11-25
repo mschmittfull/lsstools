@@ -32,7 +32,7 @@ def main():
     # #####################
     # OPTIONS
     # #####################
-    boxsize = 500.0
+    boxsize = 1500.0
 
     if True:
         # big sim
@@ -43,11 +43,13 @@ def main():
         Nptcles_per_dim = 32
         in_file = 'snap_000'
 
-    in_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-wig/' % (
+    in_dir = '/scratch/mschmittfull/lss/ms_gadget/run4/00000%d-%05d-%.1f-now/' % (
         sim_seed,Nptcles_per_dim,boxsize)
     
 
     out_dir = in_dir
+
+    print('in_dir: ', in_dir)
 
     ## subsample options
     sub_ssseed = 40000+sim_seed
@@ -55,7 +57,7 @@ def main():
     # 1% subsample of 2048**3.
     # Sep 2020, L=1500: Use 0.0015 for laptop and 0.04 for cluster.
     # L=500: Use 0.00025, 0.0015, 0.025
-    subsample_ratio = 0.00025
+    subsample_ratio = 0.025
 
     # write subsample to bigfile (should run with many cores)
     save_bigfile = bool(cmd_args.save_bigfile)
