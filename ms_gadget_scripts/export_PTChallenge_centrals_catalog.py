@@ -27,9 +27,9 @@ from lsstools.paint_utils import mass_weighted_paint_cat_to_delta
 #from lsstools.results_db.io import Pickler
 from perr.path_utils import get_in_path
 from lsstools.nbkit03_utils import get_csum, get_csqsum, apply_smoothing, catalog_persist, get_cstats_string, linear_rescale_fac, get_crms,convert_nbk_cat_to_np_array
-from perr_private.model_target_pair import ModelTargetPair, Model, Target
+from perr.model_target_pair import ModelTargetPair, Model, Target
 from lsstools.sim_galaxy_catalog_creator import SimGalaxyCatalogCreator, PTChallengeGalaxiesFromRockstarHalos
-from perr_private.read_utils import readout_mesh_at_cat_pos
+from perr.read_utils import readout_mesh_at_cat_pos
 
 #from nbodykit.lab import ArrayCatalog, BigFileMesh
 

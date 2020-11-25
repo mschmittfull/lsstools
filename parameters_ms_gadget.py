@@ -562,7 +562,7 @@ class MSGadgetSimOpts(SimOpts):
                 #
                 # Minimum mass in L=1500, Np=1536 sims is Mmin_1500 = 15.9e10 = 10**11.2
 
-                from perr_private.model_target_pair import Target
+                from perr.model_target_pair import Target
                 from sim_galaxy_catalog_creator import PTChallengeGalaxiesFromRockstarHalos
 
                 a = self.sim_scale_factor

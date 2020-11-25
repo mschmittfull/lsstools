@@ -18,7 +18,7 @@ from gen_cosmo_fcns import generate_calc_Da
 from mesh_collections import RealGrid, ComplexGrid
 import paint_utils
 import transfer_functions_from_fields
-from perr_private.model_target_pair import Target
+from perr.model_target_pair import Target
 
 
 def paint_combine_and_calc_power(trf_specs,
